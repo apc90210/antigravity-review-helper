@@ -24,6 +24,8 @@ To prevent unnecessary actions when the target system is overwhelmed:
 - **English Only**: All UI elements are in English to ensure clear communication and avoid confusion.
 - **Safety Briefing**: Requires user confirmation before the script starts.
 - **Dry Run by Default**: Real clicks are disabled on startup.
+- **Confirmation for Live Mode**: Disabling Dry Run in the GUI requires a mandatory "DANGER" confirmation dialog.
+- **Monitoring Pause**: **Ctrl+Alt+S** pauses the logic globally without disabling safety guards.
 
 ## 5. Operational Guards
 - **Rate Limits**: 1 click/sec, 20 clicks/min.

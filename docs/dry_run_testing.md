@@ -33,5 +33,11 @@ Dry-Run Mode is essential for ensuring that your button screenshots, window coor
 
 ## Switching to Live Mode
 Only after you have verified consistent detection and sanitization:
-1. Uncheck **DRY RUN MODE** in the GUI.
-2. Verify that the helper now performs real clicks on "Copy debug info" (and "Retry"/"Continue") while maintaining sanitization.
+1. Uncheck **Global Dry Run Mode (Safety)** in the GUI.
+2. Accept the safety confirmation dialog ("DANGER: Turning Dry Run OFF allows real clicks").
+3. Verify that the helper now performs real clicks.
+
+## Monitoring Pause
+- Use **Ctrl+Alt+S** at any time to pause the monitoring loop.
+- This is useful if you need to perform manual actions without interference, while keeping the helper loaded.
+- Status will show `Helper: PAUSED`.

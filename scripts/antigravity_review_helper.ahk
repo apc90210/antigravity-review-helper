@@ -17,6 +17,7 @@
 ; ==============================================================================
 
 global DRY_RUN_MODE := true
+global IS_PAUSED := false
 global SAFETY_CONFIRMATION_REQUIRED := true
 
 ; Global state
@@ -61,8 +62,8 @@ global ACCEPT_FALLBACK_IMG := ASSET_DIR "accept_button.png"
 global ENABLE_OVERAGES_IMG := ASSET_DIR "enable_overages_button.png"
 global LIMITS_FALLBACK_IMG := ALERT_DIR "limit_warning.png"
 
-global LOG_FILE := A_ScriptDir "\..\logs\antigravity_review_helper.log"
-global SNAPSHOT_DIR := A_ScriptDir "\..\debug_snapshots\"
+global LOG_FILE := "C:\antigravity-review-helper\logs\antigravity_review_helper.log"
+global SNAPSHOT_DIR := "C:\antigravity-review-helper\debug_snapshots\"
 
 ; Mouse tracking
 global LastMouseX := 0, LastMouseY := 0
@@ -133,7 +134,13 @@ MyGui.Add("Button", "x340 y480 w100", "Stop All").OnEvent("Click", StopAll)
 MyGui.Add("Button", "x450 y480 w100", "Clear Log").OnEvent("Click", (*) => FileDelete(LOG_FILE))
 MyGui.Add("Button", "x560 y480 w50", "Exit").OnEvent("Click", (*) => ExitApp())
 
-MyGui.Show("w620 h520")
+chkDryRunGlobal := MyGui.Add("Checkbox", "x10 y505 Checked", "Global Dry Run Mode (Safety)")
+chkDryRunGlobal.OnEvent("Click", OnDryRunToggle)
+
+global txtGlobalStatus := MyGui.Add("Text", "x10 y525 w600 cBlue", "Helper: RUNNING | Dry Run: ON")
+MyGui.Add("Text", "x450 y525 w160 cGray Right", "Emergency: Ctrl+Alt+Esc")
+
+MyGui.Show("w620 h550")
 RefreshWindowList()
 
 ; ==============================================================================
@@ -269,6 +276,47 @@ RefreshWindowList(*)
             MainLV.Add(, hwnd, config.Status, title)
         }
     }
+}
+
+OnDryRunToggle(ctrl, *)
+{
+    if (ctrl.Value = 0)
+    {
+        if (MsgBox("Turning Dry Run OFF allows real clicks. Continue?", "DANGER", "YesNo Icon!") = "No")
+        {
+            ctrl.Value := 1
+            global DRY_RUN_MODE := true
+        }
+        else
+        {
+            global DRY_RUN_MODE := false
+            LogAction(0, "DRY_RUN_DISABLED_BY_USER", 0, 0, "DANGER: LIVE CLICKS ENABLED")
+        }
+    }
+    else
+    {
+        global DRY_RUN_MODE := true
+        LogAction(0, "DRY_RUN_ENABLED_BY_USER", 0, 0, "Safety restored")
+    }
+    UpdateGlobalStatus()
+}
+
+UpdateGlobalStatus()
+{
+    statusText := "Helper: " (IS_PAUSED ? "PAUSED" : "RUNNING")
+    statusText .= " | Dry Run: " (DRY_RUN_MODE ? "ON" : "OFF")
+    
+    if (!DRY_RUN_MODE)
+    {
+        statusText .= " - LIVE CLICKS ENABLED"
+        txtGlobalStatus.SetFont("cRed w700")
+    }
+    else
+    {
+        txtGlobalStatus.SetFont("cBlue w400")
+    }
+    
+    txtGlobalStatus.Value := statusText
 }
 
 OnAcceptOnceClick(*)
@@ -572,8 +620,9 @@ ClearAlert(hwnd)
 
 ^!s::
 {
-    global DRY_RUN_MODE := !DRY_RUN_MODE
-    ToolTip("DRY_RUN_MODE: " (DRY_RUN_MODE ? "ON" : "OFF"))
+    global IS_PAUSED := !IS_PAUSED
+    UpdateGlobalStatus()
+    ToolTip("Helper Monitoring: " (IS_PAUSED ? "PAUSED" : "RUNNING"))
     SetTimer(() => ToolTip(), -2000)
 }
 
@@ -604,6 +653,10 @@ SetTimer(MainLoop, 1000)
 
 MainLoop()
 {
+    if (IS_PAUSED)
+    {
+        return
+    }
     for hwndStr, config in WindowConfigs
     {
         hwnd := Number(hwndStr)
@@ -828,7 +881,13 @@ LogAction(hwnd, event, x, y, actionNote)
     {
         FileAppend(logLine, LOG_FILE)
     }
-    catch
+    catch as e
     {
+        ; If logging fails, we might want to know why at least once
+        static logErrorShown := false
+        if (!logErrorShown) {
+            MsgBox("Critical: Failed to write to log file " LOG_FILE "`n`nError: " e.Message)
+            logErrorShown := true
+        }
     }
 }

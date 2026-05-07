@@ -24,3 +24,9 @@ If the helper detects an "Enable Overages" button or a usage limit warning:
 ## Continue Auto (Optional)
 - Detection for the "Continue" button is skipped if `continue_button.png` is missing.
 - The helper logs `CONTINUE_ASSET_MISSING` once if the feature is enabled but the asset is not found.
+
+## Hotkeys
+- **Ctrl+Alt+S**: Toggle Global Monitoring (START/PAUSE). Does NOT disable Dry Run.
+- **Ctrl+Alt+A**: Manual Accept/Accept All (when a button was detected but auto-mode is OFF).
+- **Ctrl+Alt+D**: Manual Debug Capture (triggers "Copy debug info" scan).
+- **Ctrl+Alt+Esc**: Emergency Exit (instantly closes the application).

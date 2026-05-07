@@ -9,6 +9,8 @@ A standalone Windows 10 desktop utility to assist with repetitive UI review acti
 - **English-Only UI**: Strictly English interface and documentation.
 - **Sanitization**: Automatic redaction of sensitive credentials from captured logs.
 - **Safety Guards**: Dry-run mode by default, rate limiting, and emergency stop (Ctrl+Alt+Esc).
+- **Monitoring Toggle**: `Ctrl+Alt+S` starts/pauses the helper without disabling safety.
+- **Live Mode Guard**: Disabling Dry Run in GUI requires an explicit safety confirmation.
 
 ## Asset Normalization
 The helper uses standardized assets with fallbacks:
