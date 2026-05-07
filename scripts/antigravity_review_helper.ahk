@@ -2,6 +2,16 @@
 #SingleInstance Force
 
 ; ==============================================================================
+; SCRIPT SELF-CHECK & QUICK REFERENCE
+; ==============================================================================
+; - DRY_RUN_MODE: true (Safety: Enabled by default)
+; - SAFETY_CONFIRMATION_REQUIRED: true (Shows startup briefing)
+; - ACCEPT BUTTON: MANUAL ONLY (Requires Ctrl+Alt+A)
+; - EMERGENCY EXIT: Ctrl+Alt+Esc (Terminates immediately)
+; - SCREEN REGIONS: Configured in SCAN_REGIONS array below
+; ==============================================================================
+
+; ==============================================================================
 ; CONFIGURATION & SAFETY SETTINGS
 ; ==============================================================================
 

@@ -9,12 +9,16 @@ Save images in this folder with these exact names:
 - `accept_button.png`
 
 ## Best Practices for Screenshots
-1. **Resolution**: Take screenshots on the same monitor resolution where they will be used.
-2. **Crop Tight**: Crop the image so it contains only the button text/background. Avoid including extra surrounding UI elements.
-3. **Format**: Must be 24-bit or 32-bit PNG.
-4. **Consistency**: Use the default VS Code / Antigravity theme if possible, as changes in background color (due to themes) may break ImageSearch.
+1. **Source**: Take the exact screenshots from **Antigravity** / **VS Code**.
+2. **Resolution**: Take screenshots on the same monitor resolution where they will be used.
+3. **Crop Tight**: Crop the image so it contains ONLY the button text/background. Avoid extra borders, white space, or surrounding UI elements.
+4. **No Effects**: Do not capture the button while hovering over it with the mouse, as this often changes its color.
+5. **Format**: Must be 24-bit or 32-bit PNG.
+6. **Maintenance**: If you change your Windows Display Scaling (e.g., from 100% to 125%) or your VS Code theme, you will likely need to retake these screenshots.
 
-## Troubleshooting
-If a button is not being detected:
-- Ensure the screenshot doesn't have transparency.
-- Check if the button has a hover effect that changes its color; try taking the screenshot of the button in its "normal" (non-hovered) state.
+## Current Status
+- [ ] `retry_button.png` - **MISSING**
+- [ ] `continue_button.png` - **MISSING**
+- [ ] `accept_button.png` - **MISSING**
+
+The script will not function until these images are provided.

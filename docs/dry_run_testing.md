@@ -36,3 +36,25 @@ Before allowing the helper to perform actual clicks, you must validate its detec
 
 ## Why "Accept" is Manual-Only
 Even when `DRY_RUN_MODE` is false, the "Accept" button will **never** be clicked automatically. The script will detect it and wait for you to press `Ctrl + Alt + A`. This is a critical safety measure to prevent the AI from accepting destructive or unreviewed changes.
+
+## Diagnostics & Troubleshooting
+
+### How to confirm the helper is running
+- Check the Windows System Tray (near the clock). You should see a green icon with an "H".
+- Right-click the icon to see options like "Reload Script" or "Exit".
+
+### Confirming initial state
+- By default, the helper starts **DISABLED**.
+- When you first run the script, a **Safety Briefing** popup must appear. If it doesn't, check the logs.
+
+### Confirming Dry-Run Mode
+- Press `Ctrl + Alt + S` to enable the helper.
+- A tooltip should appear: `Helper ENABLED (DRY RUN)`.
+- If it doesn't say `(DRY RUN)`, stop immediately and check the `DRY_RUN_MODE` setting in the script.
+
+### Finding the Log File
+- All actions are logged to `logs/antigravity_review_helper.log`.
+- Each entry includes a timestamp, action type, coordinates, and the active window title.
+
+### Emergency Stop
+- If the script behaves unexpectedly, press **Ctrl + Alt + Esc** to terminate it immediately.
