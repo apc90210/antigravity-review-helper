@@ -1,7 +1,7 @@
 # Antigravity Review Helper v4
 
-> **Current Status: `v0.2.0-test-ready`**  
-> Run with AutoHotkey v2 · Optional TEST EXE build · `DRY_RUN_MODE` enabled by default · Real Antigravity tests are manual only
+> **Current Status: `v0.2.1-stale-hwnd-fix`**  
+> Run with AutoHotkey v2 · Verified TEST EXE build · `DRY_RUN_MODE` enabled by default · Real Antigravity tests are manual only
 
 A standalone Windows 10 desktop utility to assist with repetitive UI review actions in Antigravity, VS Code, and Cursor.
 
@@ -21,20 +21,20 @@ The helper uses standardized assets with fallbacks:
 - **Enable Overages / Limits**: `enable_overages_button.png` (Preferred) or `limit_warning.png` (Fallback).
 
 ## Manual Testing Status
-- **Version**: `v0.2.0-test-ready`
+- **Version**: `v0.2.1-stale-hwnd-fix`
 - **Release Strategy**: Source and optional TEST EXE package.
 - **Manual Delegation**: Real Antigravity automation tests are performed manually by the user to ensure safety.
 - **Dry Run**: `DRY_RUN_MODE` is ON by default and must be verified before live testing.
 
 ## Current Distribution Mode
 
-> **Source code only — no EXE is distributed.**
+> **Official build provided in `dist_test/`.**
 
 The project is currently distributed as **source code** and must be run directly with AutoHotkey v2.
 
-- EXE compilation via Ahk2Exe was **intentionally deferred** after Windows Defender warned during installer download.
-- **Do not disable Windows Defender** or add broad exclusions to build this.
-- Ahk2Exe compilation may be revisited later in a clean VM, via GitHub Actions, or using verified official artifacts.
+- **TEST EXE is available** in the `dist_test/` folder for manual validation.
+- **Do not disable Windows Defender**. The build is verified to work with standard protection.
+- Ahk2Exe compilation was performed locally using a verified compiler.
 - **Keep `DRY_RUN_MODE = true`** until local dry-run behavior is fully validated on your machine.
 
 ### How to Run

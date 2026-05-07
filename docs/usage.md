@@ -26,8 +26,13 @@ If the helper detects an "Enable Overages" button or a usage limit warning:
 - The helper logs `CONTINUE_ASSET_MISSING` once if the feature is enabled but the asset is not found.
 
 ## Hotkeys
-- **Ctrl+Alt+S**: Toggle Global Monitoring (START/PAUSE). Does NOT disable Dry Run.
+- **Ctrl+Alt+S**: Toggle Monitoring (START/PAUSE). **Does NOT disable Dry Run**. It only pauses or resumes the monitoring logic.
 - **Ctrl+Alt+A**: Manual Accept/Accept All (when a button was detected but auto-mode is OFF).
 - **Ctrl+Alt+D**: Manual Debug Capture (triggers "Copy debug info" scan).
 - **Ctrl+Alt+Esc**: Emergency Exit (instantly closes the application).
+
+## Dry Run Safety
+- **Global Dry Run Mode (Safety)**: When checked (default), the helper will log detections but **never** click real buttons.
+- To enable live clicks, uncheck the box and accept the **DANGER** confirmation.
+- The status bar will turn **RED** and show **LIVE CLICKS ENABLED** when Dry Run is OFF.
 
