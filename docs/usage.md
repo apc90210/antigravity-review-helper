@@ -1,31 +1,33 @@
-# Usage Guide (v2 GUI)
+# Usage Guide (v3 Debug Viewer)
 
 ## Starting the Helper
 1. Run `scripts/antigravity_review_helper.ahk`.
-2. Accept the **Safety Briefing**.
-3. The main window will appear. By default, **DRY RUN MODE** is checked.
+2. Accept the **Safety Briefing** (note the section on data sanitization).
 
-## Window Management
-1. Click **Refresh List** to see all Antigravity/VS Code/Cursor windows.
-2. Select a window from the list to view its current configuration.
-3. **Check "Enabled"** to allow the helper to process that window.
-4. Use **Start Selected** to begin monitoring, or check **Always On** for continuous detection.
+## Using the Debug Viewer
+The Debug Viewer panel displays information related to errors and logs in your target windows.
+
+### Automatic Capture
+- When the helper detects a **Retry** button, it automatically attempts to read the visible text from that window.
+- If successful, the sanitized text appears in the text box.
+
+### Manual Capture
+If the automatic capture cannot read the text (common in Electron-based apps like VS Code):
+1. Go to your IDE window.
+2. Select the error/debug text and copy it (`Ctrl+C`).
+3. Press **Ctrl + Alt + D** or click **Refresh Debug** in the helper.
+4. The helper will import the clipboard content, redact any secrets, and display it.
+
+### Sanitization and Copying
+- All text shown in the GUI is already **Sanitized**.
+- Click **Copy Sanitized** to put the safe version into your clipboard.
+- Click **Save Sanitized Snapshot** to create a `.txt` file in the `debug_snapshots/` folder.
 
 ## Action Settings
-- **Retry Auto**: Enable to auto-click "Retry" in the selected window.
-- **Continue Auto**: Enable to auto-click "Continue" in the selected window.
-- **Accept Manual**: Detects "Accept" buttons. You can click them via:
-  - **Ctrl+Alt+A** (when the window is active)
-  - The **Accept Once** button in the GUI.
-- **Accept All (Auto)**: 
-  - **Warning**: This will automatically click "Accept" buttons.
-  - Requires confirmation to enable.
-  - Useful for bulk reviews in trusted windows.
-
-## Log Management
-- View detection results and clicks in `logs/antigravity_review_helper.log`.
-- Use **Clear Log** to reset the file.
-- Use **Save Log As...** to export a copy for review.
+- **Retry Auto**: Enable to auto-click "Retry". Capture happens before the click.
+- **Continue Auto**: Enable to auto-click "Continue".
+- **Accept Manual**: Use **Ctrl+Alt+A** to approve.
+- **Accept All (Auto)**: Dangerous mode, requires confirmation.
 
 ## Emergency Exit
 - Press **Ctrl + Alt + Esc** at any time to immediately kill the script.

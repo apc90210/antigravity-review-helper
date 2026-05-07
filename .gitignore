@@ -1,4 +1,7 @@
 logs/*.log
+debug_snapshots/*.txt
+debug_snapshots/*.log
 *.png
 !assets/buttons/*.png
 !logs/.gitkeep
+!debug_snapshots/.gitkeep
