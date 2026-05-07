@@ -1,32 +1,35 @@
-# Usage Guide (v3 Debug Viewer)
+# Usage Guide (v4 Limits Alert)
+
+## Language Setting
+The entire Antigravity Review Helper application is in **English**. All labels, buttons, and alerts are designed for English-speaking users.
 
 ## Starting the Helper
 1. Run `scripts/antigravity_review_helper.ahk`.
-2. Accept the **Safety Briefing** (note the section on data sanitization).
+2. Accept the **Safety Briefing**.
 
 ## Using the Debug Viewer
 The Debug Viewer panel displays information related to errors and logs in your target windows.
 
-### Automatic Capture
-- When the helper detects a **Retry** button, it automatically attempts to read the visible text from that window.
-- If successful, the sanitized text appears in the text box.
+### "Copy debug info" Integration
+- If **Copy Debug Info Auto** is ON, the helper will search for the "Copy debug info" button when a Retry is detected.
+- If found, it will click the button, read the clipboard, sanitize the text, and display it.
+- **Manual Capture (Ctrl+Alt+D)** also prioritizes the "Copy debug info" button.
 
-### Manual Capture
-If the automatic capture cannot read the text (common in Electron-based apps like VS Code):
-1. Go to your IDE window.
-2. Select the error/debug text and copy it (`Ctrl+C`).
-3. Press **Ctrl + Alt + D** or click **Refresh Debug** in the helper.
-4. The helper will import the clipboard content, redact any secrets, and display it.
+### Fallback Capture
+If the button is not found:
+1. The helper attempts to read text via UI Automation (accessible text).
+2. If that fails, it prompts for a manual clipboard import (select text -> `Ctrl+C` -> confirm in helper).
 
-### Sanitization and Copying
-- All text shown in the GUI is already **Sanitized**.
-- Click **Copy Sanitized** to put the safe version into your clipboard.
-- Click **Save Sanitized Snapshot** to create a `.txt` file in the `debug_snapshots/` folder.
+## Limits Alert
+If the helper detects a usage limit warning (e.g., "reached your limit" or "quota exhausted"):
+1. A red blinking **LIMITS** window will open.
+2. All automatic actions for that window are paused.
+3. You must click **Clear Alert** in the alert window to resume monitoring, or **Stop This Window** to disable it.
 
 ## Action Settings
-- **Retry Auto**: Enable to auto-click "Retry". Capture happens before the click.
-- **Continue Auto**: Enable to auto-click "Continue".
-- **Accept Manual**: Use **Ctrl+Alt+A** to approve.
+- **Retry Auto**: Enable to auto-click "Retry".
+- **Copy Debug Info Auto**: Enable to allow auto-clicking "Copy debug info" during Retry events (OFF by default).
+- **Limits Alert Monitor**: Enable to scan for usage limits (ON by default).
 - **Accept All (Auto)**: Dangerous mode, requires confirmation.
 
 ## Emergency Exit

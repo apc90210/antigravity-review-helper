@@ -1,30 +1,32 @@
-# Dry-Run Testing Guide (v3)
+# Dry-Run Testing Guide (v4)
 
 Dry-Run Mode is essential for ensuring that your button screenshots, window coordinates, and debug capture logic are correctly configured.
 
-## How to Test Debug Capture
+## Testing "Copy debug info"
 1. Ensure **DRY RUN MODE** is checked.
-2. Select your IDE window and enable it.
-3. Trigger a "Retry" button appearance in the IDE.
+2. Check **Copy Debug Info Auto** for your window.
+3. Trigger a "Retry" button appearance.
 4. Verify:
-   - Does the helper log `RETRY_DETECTED`?
-   - Does the **Debug Viewer** update its text?
-   - Is the text correctly **Sanitized** (look for `[REDACTED]`)?
-   - Does the GUI show the correct HWND and capture method?
+   - Does the helper log `COPY_DEBUG_INFO_BUTTON_DETECTED`?
+   - Does it show `DRY_RUN_COPY_DEBUG_INFO_DETECTED` in the logs?
+   - In the Debug Viewer, it should say "detected but not clicked".
 
-## How to Test Clicks (Dry)
-1. Trigger a "Continue" or "Retry" button.
-2. Observe the tooltips and logs:
-   - Tooltips will show: `DRY RUN: Detected [Action] at [X,Y]`.
-   - Logs will record: `DRY_RUN_[ACTION]_DETECTED`.
-3. **No real click should happen.**
+## Testing Limits Alert
+1. Ensure **Limits Alert Monitor** is checked.
+2. Simulate a limit warning (e.g., by typing "quota exhausted" in an open text file within the IDE).
+3. Verify:
+   - Does the red blinking **LIMITS** window appear?
+   - Does the helper log `LIMIT_WARNING_DETECTED_UIA_TEXT`?
+   - Does the alert window correctly identify the target window?
+   - Try the **Clear Alert** and **Stop This Window** buttons.
 
-## Manual Capture Test
-1. Select text in any window.
+## Testing Manual Capture (Ctrl+Alt+D)
+1. Select the IDE window.
 2. Press **Ctrl + Alt + D**.
-3. Verify that the sanitized text appears in the Debug Viewer.
+3. If the "Copy debug info" button is visible, the helper should log its detection.
+4. If not, it should fall back to UIA or clipboard capture.
 
 ## Switching to Live Mode
 Only after you have verified consistent detection and sanitization:
 1. Uncheck **DRY RUN MODE** in the GUI.
-2. Verify that the helper now performs real clicks (preceded by debug capture for Retry events).
+2. Verify that the helper now performs real clicks on "Copy debug info" (and "Retry"/"Continue") while maintaining sanitization.
