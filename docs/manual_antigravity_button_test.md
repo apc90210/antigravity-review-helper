@@ -26,10 +26,11 @@ This document outlines the steps for manually validating the Antigravity Review 
 2. Click **Start Selected**.
 3. Perform an action in Antigravity that triggers the button (e.g., cause a failure to show Retry).
 4. Wait for the helper to detect the button.
-5. Check the **Live Event Log** panel in the GUI. You should see a `DRY_RUN_RETRY_DETECTED` entry.
+5. Check the **Live Event Log** panel in the GUI. You should see a `DRY_RUN_RETRY_DETECTED` or `DRY_RUN_CLICK_BLOCKED` entry.
 6. Verify the **Retry Detected** counter has incremented.
-7. Check `logs\antigravity_review_helper.log` for a permanent record.
-8. Verify that **NO REAL CLICK** occurred.
+7. If "Retry Auto" was ON, verify the **Blocked by Dry Run** counter has incremented (since the helper attempted to click but was blocked by safety).
+8. Check `logs\antigravity_review_helper.log` for a permanent record.
+9. Verify that **NO REAL CLICK** occurred.
 
 ### 4. Live Testing
 1. If Dry Run detection was successful, you may choose to test live clicks.

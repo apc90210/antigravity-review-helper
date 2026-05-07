@@ -39,6 +39,7 @@ The right-side panel displays runtime counters for all major events:
 - **Detection Counters**: Track when buttons like "Retry" or "Accept All" are seen.
 - **Action Counters**: Track real clicks (only in LIVE mode).
 - **Safety Counters**: Track blocks due to self-window exclusion, stale handles, or Dry Run.
+  - **Blocked by Dry Run**: Increments ONLY when an automated action (like an auto-click) was prevented because Dry Run mode was ON. It does not increment for simple detections or when in Live mode.
 - **Reset Counters**: Click to set all visible counters back to 0. Counters also reset automatically every time the program is launched.
 
 ### Live Event Log

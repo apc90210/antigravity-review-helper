@@ -102,6 +102,10 @@ InitCounters()
 MyGui.Add("Text", "x10 y10", "Detected Antigravity Project Windows:")
 ; HWND | Status | Project | Title
 global MainLV := MyGui.Add("ListView", "x10 y30 w550 h120", ["HWND", "Status", "Project", "Title"])
+MainLV.ModifyCol(1, 70)
+MainLV.ModifyCol(2, 100)
+MainLV.ModifyCol(3, 160)
+MainLV.ModifyCol(4, 200)
 MainLV.OnEvent("Click", OnLVClick)
 
 ; Event Counters (Right Side)
@@ -130,7 +134,7 @@ yPos += 20
 AddCounterUI(MyGui, "StaleWindowSkipped", "Stale Skipped:", 580, yPos)
 AddCounterUI(MyGui, "CooldownSkipped", "Cooldown Skips:", 800, yPos)
 yPos += 20
-AddCounterUI(MyGui, "DryRunBlocked", "Dry Run Blocked:", 580, yPos)
+AddCounterUI(MyGui, "DryRunBlocked", "Blocked by Dry Run:", 580, yPos)
 
 btnResetCounters := MyGui.Add("Button", "x580 y225 w120", "Reset Counters")
 btnResetCounters.OnEvent("Click", (*) => ResetCounters())
@@ -230,46 +234,58 @@ AddCounterUI(guiObj, name, label, x, y) {
 }
 
 IncrementCounter(eventName) {
-    global EventCounters, CounterControls
+    global EventCounters, CounterControls, DRY_RUN_MODE
     
-    ; Map event to counter
-    counter := ""
-    if (InStr(eventName, "RETRY_DETECTED")) {
-        counter := "RetryDetected"
-    } else if (InStr(eventName, "CLICKED_RETRY")) {
-        counter := "RetryClicked"
-    } else if (InStr(eventName, "COPY_DEBUG_INFO_DETECTED")) {
-        counter := "CopyDebugDetected"
-    } else if (InStr(eventName, "COPY_DEBUG_INFO_CLICKED") or InStr(eventName, "CLICKED_COPY_DEBUG")) {
-        counter := "CopyDebugClicked"
-    } else if (InStr(eventName, "ACCEPT_ALL_DETECTED") or InStr(eventName, "ACCEPT_MANUAL_DETECTED")) {
-        counter := "AcceptDetected"
-    } else if (InStr(eventName, "CLICKED_ACCEPT_MANUAL") or InStr(eventName, "CLICKED_ACCEPT_ALL_AUTO")) {
-        counter := "AcceptClicked"
-    } else if (InStr(eventName, "CONTINUE_DETECTED")) {
-        counter := "ContinueDetected"
-    } else if (InStr(eventName, "CLICKED_CONTINUE")) {
-        counter := "ContinueClicked"
-    } else if (InStr(eventName, "LIMIT_WARNING_DETECTED") or InStr(eventName, "ENABLE_OVERAGES_DETECTED")) {
-        counter := "LimitsDetected"
-    } else if (InStr(eventName, "LIMIT_POPUP_OPENED")) {
-        counter := "LimitsPopupOpened"
-    } else if (InStr(eventName, "START_BLOCKED")) {
-        counter := "StartBlocked"
-    } else if (InStr(eventName, "TARGET_WINDOW_GONE")) {
-        counter := "TargetWindowGone"
-    } else if (InStr(eventName, "SKIPPED_STALE_WINDOW") or InStr(eventName, "STALE_WINDOW")) {
-        counter := "StaleWindowSkipped"
-    } else if (InStr(eventName, "COOLDOWN_SKIP")) {
-        counter := "CooldownSkipped"
-    } else if (InStr(eventName, "DRY_RUN_MODE_BLOCKED") or InStr(eventName, "DR_LIVE_DANGER")) {
-        counter := "DryRunBlocked"
-    }
-    
+    ; 1. Total Events always increments
     EventCounters["TotalEvents"] += 1
     if (CounterControls.Has("TotalEvents"))
         CounterControls["TotalEvents"].Value := EventCounters["TotalEvents"]
 
+    ; 2. Primary Mapping Chain
+    counter := ""
+    
+    ; Detection Mappings
+    if (InStr(eventName, "RETRY_DETECTED"))
+        counter := "RetryDetected"
+    else if (InStr(eventName, "COPY_DEBUG_INFO_DETECTED"))
+        counter := "CopyDebugDetected"
+    else if (InStr(eventName, "ACCEPT_ALL_DETECTED") or InStr(eventName, "ACCEPT_MANUAL_DETECTED"))
+        counter := "AcceptDetected"
+    else if (InStr(eventName, "CONTINUE_DETECTED"))
+        counter := "ContinueDetected"
+    else if (InStr(eventName, "LIMIT_WARNING_DETECTED") or InStr(eventName, "ENABLE_OVERAGES_DETECTED"))
+        counter := "LimitsDetected"
+    
+    ; Click/Action Mappings
+    else if (InStr(eventName, "CLICKED_RETRY"))
+        counter := "RetryClicked"
+    else if (InStr(eventName, "CLICKED_COPY_DEBUG") or InStr(eventName, "COPY_DEBUG_INFO_CLICKED"))
+        counter := "CopyDebugClicked"
+    else if (InStr(eventName, "CLICKED_ACCEPT_MANUAL") or InStr(eventName, "CLICKED_ACCEPT_ALL_AUTO"))
+        counter := "AcceptClicked"
+    else if (InStr(eventName, "CLICKED_CONTINUE"))
+        counter := "ContinueClicked"
+    else if (InStr(eventName, "LIMIT_POPUP_OPENED"))
+        counter := "LimitsPopupOpened"
+    
+    ; Blocked/Safety Mappings
+    else if (InStr(eventName, "START_BLOCKED"))
+        counter := "StartBlocked"
+    else if (InStr(eventName, "TARGET_WINDOW_GONE"))
+        counter := "TargetWindowGone"
+    else if (InStr(eventName, "SKIPPED_STALE_WINDOW") or InStr(eventName, "STALE_WINDOW") or InStr(eventName, "STALE_HWND"))
+        counter := "StaleWindowSkipped"
+    else if (InStr(eventName, "COOLDOWN_SKIP"))
+        counter := "CooldownSkipped"
+    
+    ; Specific Dry Run Blocked mapping (Defensive check)
+    if (DRY_RUN_MODE) {
+        if (InStr(eventName, "DRY_RUN_CLICK_BLOCKED") or InStr(eventName, "CLICK_BLOCKED_DRY_RUN")) {
+            counter := "DryRunBlocked"
+        }
+    }
+
+    ; Increment if we found a valid mapping
     if (counter != "" and EventCounters.Has(counter)) {
         EventCounters[counter] += 1
         if (CounterControls.Has(counter))
@@ -853,7 +869,7 @@ ScanForButton(imgPath, x1, y1, x2, y2, &fX, &fY, tolerance := 50) {
 DoClick(hwnd, clickX, clickY, type) {
     if (DRY_RUN_MODE) {
         upperType := StrUpper(type)
-        LogAction(hwnd, "DRY_RUN_" upperType "_DETECTED", clickX, clickY, "Dry Run")
+        LogAction(hwnd, "DRY_RUN_CLICK_BLOCKED", clickX, clickY, "Type: " upperType)
         return
     }
     CoordMode "Mouse", "Screen"
