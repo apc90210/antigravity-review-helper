@@ -28,9 +28,8 @@ global FORBIDDEN_TITLES := ["terminal", "powershell", "cmd", "password", "creden
 
 ; Redaction Patterns
 global REDACT_PATTERNS := [
-    "i)(password|passwd|pwd)[:=\s]+[^\s]+",
-    "i)(token|api_key|apikey|secret|private_key|ssh|bearer|authorization|cookie|session)[:=\s]+[^\s]+",
-    "i)(DATABASE_URL|POSTGRES_PASSWORD|DJANGO_SECRET_KEY|OPENAI_API_KEY|ANTHROPIC_API_KEY|GOOGLE_API_KEY)[:=\s]+[^\s]+"
+    "i)(password|passwd|pwd|token|api_key|apikey|secret|private_key|ssh|bearer|authorization|cookie|session|DATABASE_URL|POSTGRES_PASSWORD|DJANGO_SECRET_KEY|OPENAI_API_KEY|ANTHROPIC_API_KEY|GOOGLE_API_KEY)(\s*[:=]\s*)([^\s\r\n]+)",
+    "i)(Authorization:\s+Bearer\s+)([^\s\r\n]+)"
 ]
 
 ; Asset Paths
@@ -87,29 +86,31 @@ btnAcceptOnce := MyGui.Add("Button", "x220 y230 w120", "Accept Once")
 btnAcceptOnce.OnEvent("Click", OnAcceptOnceClick)
 
 ; Debug Viewer Panel
-MyGui.Add("GroupBox", "x10 y270 w600 h220", "Debug Viewer")
+MyGui.Add("GroupBox", "x10 y270 w600 h260", "Debug Viewer")
 txtDebugInfo := MyGui.Add("Text", "x20 y290 w580", "No window selected.")
-editDebugText := MyGui.Add("Edit", "x20 y310 w580 h130 ReadOnly Multi", "")
-btnRefreshDebug := MyGui.Add("Button", "x20 y450 w100", "Refresh Debug")
+txtCaptureStatus := MyGui.Add("Text", "x20 y310 w280", "Capture Status: Idle")
+txtRedactionStatus := MyGui.Add("Text", "x310 y310 w280", "Redaction Status: N/A")
+editDebugText := MyGui.Add("Edit", "x20 y330 w580 h150 ReadOnly Multi", "")
+btnRefreshDebug := MyGui.Add("Button", "x20 y490 w100", "Refresh Debug")
 btnRefreshDebug.OnEvent("Click", (*) => OnManualDebugCapture())
-btnCopyDebug := MyGui.Add("Button", "x130 y450 w120", "Copy Sanitized")
+btnCopyDebug := MyGui.Add("Button", "x130 y490 w120", "Copy Sanitized")
 btnCopyDebug.OnEvent("Click", OnCopySanitized)
-btnClearDebug := MyGui.Add("Button", "x260 y450 w100", "Clear Debug")
-btnClearDebug.OnEvent("Click", (*) => (editDebugText.Value := "", txtDebugInfo.Value := "Debug cleared."))
-btnSaveSnapshot := MyGui.Add("Button", "x370 y450 w150", "Save Sanitized Snapshot")
+btnClearDebug := MyGui.Add("Button", "x260 y490 w100", "Clear Debug")
+btnClearDebug.OnEvent("Click", OnClearDebug)
+btnSaveSnapshot := MyGui.Add("Button", "x370 y490 w150", "Save Sanitized Snapshot")
 btnSaveSnapshot.OnEvent("Click", OnSaveSnapshot)
 
 ; Global Controls
-MyGui.Add("GroupBox", "x10 y500 w600 h60", "Global Controls")
-btnRefresh := MyGui.Add("Button", "x20 y520 w100", "Refresh List")
+MyGui.Add("GroupBox", "x10 y540 w600 h60", "Global Controls")
+btnRefresh := MyGui.Add("Button", "x20 y560 w100", "Refresh List")
 btnRefresh.OnEvent("Click", RefreshWindowList)
-chkDryRun := MyGui.Add("Checkbox", "x130 y525 vDryRunChecked", "DRY RUN MODE")
+chkDryRun := MyGui.Add("Checkbox", "x130 y565 vDryRunChecked", "DRY RUN MODE")
 chkDryRun.Value := DRY_RUN_MODE
 chkDryRun.OnEvent("Click", (ctrl, *) => (global DRY_RUN_MODE := ctrl.Value))
-btnStopAll := MyGui.Add("Button", "x250 y520 w100", "Stop All")
+btnStopAll := MyGui.Add("Button", "x250 y560 w100", "Stop All")
 btnStopAll.OnEvent("Click", StopAll)
 
-MyGui.Add("Text", "x10 y570 cGray", "Emergency: Ctrl+Alt+Esc | Debug Capture: Ctrl+Alt+D")
+MyGui.Add("Text", "x10 y610 cGray", "Emergency: Ctrl+Alt+Esc | Debug Capture: Ctrl+Alt+D")
 MyGui.Show()
 
 RefreshWindowList()
@@ -134,6 +135,9 @@ OnLVClick(LV, RowNumber)
     
     title := WinGetTitle("ahk_id " hwnd)
     txtDebugInfo.Value := "Target: " title " (HWND: " hwnd ")"
+    txtCaptureStatus.Value := "Last Detection: " (config.LastRetryTime ? config.LastRetryTime : "None")
+    txtRedactionStatus.Value := "Redaction Status: " (config.LastCaptureStatus ? config.LastCaptureStatus : "Idle")
+    editDebugText.Value := config.CapturedText ? config.CapturedText : ""
 
     ; Re-bind events to current config
     chkEnabled.OnEvent("Click", (ctrl, *) => (config.Enabled := ctrl.Value))
@@ -184,7 +188,7 @@ RefreshWindowList(*) {
             if (InStr(title, pattern)) { isMatch := true; break }
         }
         if (isMatch) {
-            config := {Enabled: 0, AlwaysOn: 0, RetryAuto: 0, ContinueAuto: 0, AcceptManual: 1, AcceptAuto: 0, Status: "Stopped", LastAcceptX: 0, LastAcceptY: 0, LastRetryTime: ""}
+            config := {Enabled: 0, AlwaysOn: 0, RetryAuto: 0, ContinueAuto: 0, AcceptManual: 1, AcceptAuto: 0, Status: "Stopped", LastAcceptX: 0, LastAcceptY: 0, LastRetryTime: "", LastCaptureStatus: "Idle", CapturedText: ""}
             if (oldConfigs.Has("" hwnd)) config := oldConfigs["" hwnd]
             WindowConfigs["" hwnd] := config
             LV.Add("", hwnd, config.Status, title)
@@ -211,6 +215,18 @@ OnCopySanitized(*) {
     }
 }
 
+OnClearDebug(*) {
+    RowNumber := LV.GetNext()
+    if (RowNumber = 0) return
+    hwnd := LV.GetText(RowNumber, 1)
+    config := WindowConfigs["" hwnd]
+    config.CapturedText := ""
+    config.LastCaptureStatus := "Cleared"
+    editDebugText.Value := ""
+    txtRedactionStatus.Value := "Redaction Status: Cleared"
+    LogAction(hwnd, "DEBUG_CLEARED", 0, 0, "")
+}
+
 OnSaveSnapshot(*) {
     RowNumber := LV.GetNext()
     if (RowNumber = 0 or editDebugText.Value = "") return
@@ -218,6 +234,7 @@ OnSaveSnapshot(*) {
     timestamp := FormatTime(, "yyyyMMdd_HHmmss")
     filename := SNAPSHOT_DIR timestamp "_" hwnd "_retry_debug.txt"
     try {
+        if (!DirExist(SNAPSHOT_DIR)) DirCreate(SNAPSHOT_DIR)
         FileAppend(editDebugText.Value, filename)
         LogAction(hwnd, "DEBUG_SNAPSHOT_SAVED", 0, 0, filename)
         MsgBox("Snapshot saved: " filename)
@@ -233,46 +250,95 @@ OnSaveSnapshot(*) {
 OnManualDebugCapture()
 {
     RowNumber := LV.GetNext()
-    if (RowNumber = 0) return
-    hwnd := LV.GetText(RowNumber, 1)
+    if (RowNumber = 0) {
+        ; Fallback: try active window if it's in our allowed list
+        hwnd := WinActive("A")
+        if (!WindowConfigs.Has("" hwnd)) {
+            MsgBox("Please select a target window in the list first.")
+            return
+        }
+    } else {
+        hwnd := LV.GetText(RowNumber, 1)
+    }
     CaptureDebugForWindow(hwnd, "MANUAL")
 }
 
 CaptureDebugForWindow(hwnd, triggerType := "AUTO")
 {
     LogAction(hwnd, "DEBUG_CAPTURE_ATTEMPTED", 0, 0, triggerType)
+    config := WindowConfigs["" hwnd]
     debugText := ""
     method := "NONE"
 
-    ; Method A: Basic Accessible Text (UIA Lite)
-    ; In many standard Windows apps, this works. For Electron, it's limited.
+    ; Method A: Improved Text Capture (UIA Lite / Controls)
     try {
+        ; 1. Try WinGetText (Standard)
         debugText := WinGetText("ahk_id " hwnd)
-        if (StrLen(debugText) > 50) method := "UIA_LITE"
+        
+        ; 2. Try to find specific controls if WinGetText is incomplete
+        controls := WinGetControls("ahk_id " hwnd)
+        for ctrl in controls {
+            ; Check if control class or name matches debug-related keywords
+            if (RegExMatch(ctrl, "i)Debug|Output|Error|Console|Logs|Problems|Terminal")) {
+                ctrlText := ControlGetText(ctrl, "ahk_id " hwnd)
+                if (ctrlText != "" and !InStr(debugText, ctrlText)) {
+                    debugText .= "`n--- Control: " ctrl " ---`n" ctrlText
+                }
+            }
+        }
+        
+        if (StrLen(debugText) > 20) method := "UIA_LITE"
     }
 
-    ; Method B: Clipboard Fallback (If manual or if auto failed)
+    ; Method B: Manual clipboard fallback
     if (method = "NONE" and triggerType = "MANUAL")
     {
-        msg := "Debug text is not accessible automatically.`n`nPlease select/copy the debug text in the target window, then click OK to import."
+        oldClip := ClipboardAll()
+        A_Clipboard := ""
+        msg := "Debug text is not accessible automatically.`n`nSelect/copy the debug text in the target window, then click OK to import."
         if (MsgBox(msg, "Manual Capture", "Iconi OkCancel") = "OK")
         {
-            debugText := A_Clipboard
-            method := "CLIPBOARD"
+            if (ClipWait(2)) {
+                debugText := A_Clipboard
+                method := "CLIPBOARD"
+                
+                if (MsgBox("Confirm this text came from the selected window?`n`n" SubStr(debugText, 1, 100) "...", "Confirm Source", "YesNo") = "No") {
+                    debugText := ""
+                    method := "NONE"
+                }
+            }
         }
+        A_Clipboard := oldClip
     }
 
     if (method != "NONE")
     {
         sanitized := SanitizeDebug(debugText)
-        editDebugText.Value := sanitized
-        txtDebugInfo.Value := "Last Capture: " FormatTime(, "HH:mm:ss") " | Method: " method
+        config.CapturedText := sanitized
+        config.LastCaptureStatus := "Sanitized (" method ")"
+        config.LastRetryTime := FormatTime(, "yyyy-MM-dd HH:mm:ss")
+        
+        ; Update UI if this window is selected
+        RowNumber := LV.GetNext()
+        if (RowNumber > 0 && LV.GetText(RowNumber, 1) = "" hwnd) {
+            editDebugText.Value := sanitized
+            txtCaptureStatus.Value := "Last Capture: " config.LastRetryTime
+            txtRedactionStatus.Value := "Redaction Status: " config.LastCaptureStatus
+        }
+        
         LogAction(hwnd, "DEBUG_CAPTURED_" method, 0, 0, "Length: " StrLen(sanitized))
+        LogAction(hwnd, "DEBUG_SANITIZED", 0, 0, "")
     }
     else
     {
-        editDebugText.Value := "DEBUG_CAPTURE_NOT_AVAILABLE`nMethod A failed. Use Ctrl+Alt+D for manual clipboard fallback."
-        LogAction(hwnd, "DEBUG_CAPTURE_NOT_AVAILABLE", 0, 0, "")
+        statusMsg := "DEBUG_CAPTURE_NOT_AVAILABLE"
+        config.LastCaptureStatus := statusMsg
+        if (triggerType = "MANUAL") {
+            editDebugText.Value := statusMsg "`nMethod A failed and Clipboard was empty or rejected."
+        } else {
+            editDebugText.Value := statusMsg "`nTry manual capture with Ctrl+Alt+D."
+        }
+        LogAction(hwnd, statusMsg, 0, 0, "")
     }
 }
 
@@ -280,7 +346,7 @@ SanitizeDebug(text)
 {
     for pattern in REDACT_PATTERNS
     {
-        text := RegExReplace(text, pattern, "$1=[REDACTED]")
+        text := RegExReplace(text, pattern, "$1$2[REDACTED]")
     }
     return text
 }
@@ -349,6 +415,7 @@ MainLoop()
         ; Retry -> Trigger Debug Capture
         if (ScanForButton(RETRY_IMG, x, y, x+w, y+h, &foundX, &foundY)) {
             LogAction(hwnd, "RETRY_DETECTED", foundX, foundY, "")
+            ; Capture debug before potentially clicking
             CaptureDebugForWindow(hwnd, "AUTO")
             if (config.RetryAuto) DoClick(hwnd, foundX, foundY, "Retry")
             continue
