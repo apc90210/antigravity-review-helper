@@ -36,8 +36,10 @@ For every detected window, you can configure the following options:
 ### 6. Continue Auto
 - Automatically clicks the "Continue" button when detected.
 
-### 7. Accept Manual / Accept Auto
-- Handles "Accept" button detection and automated approvals.
+### 7. Accept All Auto
+- Detection and automation for "Accept all" buttons.
+- Uses `accept_all_button.png` (Preferred) or `accept_button.png` (Fallback).
+- Requires explicit confirmation to enable.
 
 ## Limits Alert Safety
 If a limit warning is detected in a window, all automatic actions (Retry, Copy Debug, etc.) are **paused** for that window until the alert is cleared by the user.

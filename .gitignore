@@ -3,5 +3,6 @@ debug_snapshots/*.txt
 debug_snapshots/*.log
 *.png
 !assets/buttons/*.png
+!assets/alerts/*.png
 !logs/.gitkeep
 !debug_snapshots/.gitkeep

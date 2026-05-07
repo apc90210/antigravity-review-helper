@@ -1,6 +1,6 @@
 # Debug Viewer Guide (v4)
 
-The Debug Viewer is a diagnostic tool that automatically captures error messages and output logs when a "Retry" button is detected in a monitored window.
+The Debug Viewer is a diagnostic tool that automatically captures error messages and output logs in **English** when a "Retry" button is detected.
 
 ## Capture Methods
 

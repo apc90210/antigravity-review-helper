@@ -1,41 +1,33 @@
-# Limits Alert Guide
+# Limits Warning Guide
 
-The Limits Alert feature protects your Antigravity usage and prevents unnecessary clicks when rate limits or quotas are reached.
+The Limits Warning feature protects your Antigravity usage by detecting when you are close to or have reached your usage limits.
 
-## How it Works
+## Detection Methods
 
-The helper continuously scans selected target windows for limit-related warnings.
+1.  **"Enable Overages" Indicator**:
+    The helper searches for the "Enable Overages" button (used as a limit indicator) using:
+    - `enable_overages_button.png` (Preferred)
+    - `limit_warning.png` (Fallback)
+    
+    **Note**: The helper will **never** click this button automatically.
 
-### Detection Methods
+2.  **UI Automation (Text Scan)**:
+    Searches for phrases like `limit reached`, `quota exhausted`, or `rate limit`.
 
-1.  **UI Automation (Text Scan)**:
-    The helper searches for specific phrases in the window text, such as:
-    - `limit`, `usage limit`, `limit reached`
-    - `quota`, `quota exhausted`
-    - `rate limit`, `too many requests`
-    - `out of credits`, `no credits`
+## Warning Popup
 
-2.  **Image Detection (Fallback)**:
-    If text-based detection fails, the helper looks for `assets/alerts/limit_warning.png`. This is an optional screenshot of the warning area.
+When a limit is detected:
+- A red topmost popup window appears with the text **LIMITS**.
+- **Actions Paused**: All automatic actions for the affected window are paused while the popup is active.
+- **English Only**: The popup and all instructions are in English.
 
-## Alert Behavior
+## How to Clear
+- The popup has only one button: **OK**.
+- Clicking **OK** closes the popup and clears the alert state, allowing the helper to resume monitoring.
+- If the limit indicator is still visible, the popup may reappear after the next scan.
 
-When a limit warning is detected:
-
-- **Blinking Alert**: A red blinking topmost window appears with the text **LIMITS**.
-- **Auto-Clicking Paused**: All automatic actions (Retry, Continue, Accept) are immediately stopped for the affected window.
-- **Audible Beep**: The helper emits a beep every 10 seconds to notify the user.
-- **Logging**: The event is recorded as `LIMIT_WARNING_DETECTED`.
-
-## User Actions
-
-The alert window provides several options:
-
-- **Stop This Window**: Sets the target window status to "Stopped" and closes the alert.
-- **Stop All**: Stops all monitored windows and closes the alert.
-- **Clear Alert**: Acknowledges the warning and resumes monitoring (if detection phrases are still present, the alert may reappear).
-- **Main UI**: Brings the main helper window to the front.
-
-## Safety interaction
-
-While a Limits Alert is active, the helper will log `SKIPPED_LIMIT_ALERT_ACTIVE` if it attempts to perform any action on that window. This ensures no clicks are wasted while the system is in a limited state.
+## Event Logs
+- `ENABLE_OVERAGES_DETECTED`: The limit indicator image was found.
+- `LIMIT_POPUP_OPENED`: The warning popup was displayed.
+- `LIMIT_POPUP_CLOSED`: The user clicked OK.
+- `SKIPPED_LIMIT_ALERT_ACTIVE`: An action was skipped because the popup was open.

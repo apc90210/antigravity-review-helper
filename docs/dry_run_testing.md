@@ -11,14 +11,19 @@ Dry-Run Mode is essential for ensuring that your button screenshots, window coor
    - Does it show `DRY_RUN_COPY_DEBUG_INFO_DETECTED` in the logs?
    - In the Debug Viewer, it should say "detected but not clicked".
 
-## Testing Limits Alert
+## Testing Limits Warning
 1. Ensure **Limits Alert Monitor** is checked.
 2. Simulate a limit warning (e.g., by typing "quota exhausted" in an open text file within the IDE).
 3. Verify:
-   - Does the red blinking **LIMITS** window appear?
+   - Does the red **LIMITS** popup appear?
    - Does the helper log `LIMIT_WARNING_DETECTED_UIA_TEXT`?
-   - Does the alert window correctly identify the target window?
-   - Try the **Clear Alert** and **Stop This Window** buttons.
+   - Try clicking **OK** and verify the popup closes.
+
+## Testing Accept All Auto
+1. Trigger an "Accept all" button appearance.
+2. Verify:
+   - Does the helper log `DRY_RUN_ACCEPT_ALL_DETECTED`?
+   - It should NOT click the button.
 
 ## Testing Manual Capture (Ctrl+Alt+D)
 1. Select the IDE window.

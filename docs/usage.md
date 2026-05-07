@@ -1,36 +1,26 @@
-# Usage Guide (v4 Limits Alert)
+# Usage Guide (v4)
 
 ## Language Setting
-The entire Antigravity Review Helper application is in **English**. All labels, buttons, and alerts are designed for English-speaking users.
+The entire Antigravity Review Helper application is in **English**.
 
-## Starting the Helper
-1. Run `scripts/antigravity_review_helper.ahk`.
-2. Accept the **Safety Briefing**.
+## Limits Warning
+If the helper detects an "Enable Overages" button or a usage limit warning:
+1. A red **LIMITS** warning popup will appear.
+2. The popup is topmost and has only one button: **OK**.
+3. All automatic actions for that window are paused while the popup is open.
+4. Click **OK** to close the popup and resume monitoring.
 
-## Using the Debug Viewer
-The Debug Viewer panel displays information related to errors and logs in your target windows.
-
-### "Copy debug info" Integration
-- If **Copy Debug Info Auto** is ON, the helper will search for the "Copy debug info" button when a Retry is detected.
-- If found, it will click the button, read the clipboard, sanitize the text, and display it.
-- **Manual Capture (Ctrl+Alt+D)** also prioritizes the "Copy debug info" button.
-
-### Fallback Capture
-If the button is not found:
-1. The helper attempts to read text via UI Automation (accessible text).
-2. If that fails, it prompts for a manual clipboard import (select text -> `Ctrl+C` -> confirm in helper).
-
-## Limits Alert
-If the helper detects a usage limit warning (e.g., "reached your limit" or "quota exhausted"):
-1. A red blinking **LIMITS** window will open.
-2. All automatic actions for that window are paused.
-3. You must click **Clear Alert** in the alert window to resume monitoring, or **Stop This Window** to disable it.
+## Accept All Auto
+- The helper searches for an **Accept all** button using `accept_all_button.png` or `accept_button.png`.
+- **Manual Mode**: If detected, it saves the location. Press **Ctrl+Alt+A** or click **Accept All Once** to click it.
+- **Auto Mode**: Requires explicit confirmation to enable. Once enabled, it will click the button automatically when detected.
 
 ## Action Settings
 - **Retry Auto**: Enable to auto-click "Retry".
 - **Copy Debug Info Auto**: Enable to allow auto-clicking "Copy debug info" during Retry events (OFF by default).
 - **Limits Alert Monitor**: Enable to scan for usage limits (ON by default).
-- **Accept All (Auto)**: Dangerous mode, requires confirmation.
+- **Accept All Auto**: Dangerous mode, requires confirmation.
 
-## Emergency Exit
-- Press **Ctrl + Alt + Esc** at any time to immediately kill the script.
+## Continue Auto (Optional)
+- Detection for the "Continue" button is skipped if `continue_button.png` is missing.
+- The helper logs `CONTINUE_ASSET_MISSING` once if the feature is enabled but the asset is not found.

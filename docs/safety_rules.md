@@ -9,11 +9,12 @@ The **Debug Viewer** captures text from target windows.
 - **Clipboard Safety**: Original clipboard content is saved before automated captures and restored immediately after reading.
 - **Sanitized Storage**: Snapshots and logs only contain redacted text.
 
-## 2. Limits Alert Protection
-To prevent unnecessary actions when the target system is overwhelmed or limited:
-- **Auto-Detection**: Scans for "quota exhausted", "rate limit", and similar warnings.
-- **Blinking Alert**: Visually warns the user and **pauses all automatic clicks** for the affected window.
-- **Manual Override**: Requires user interaction to clear the alert and resume automation.
+## 2. Limits Warning Protection
+To prevent unnecessary actions when the target system is overwhelmed:
+- **Auto-Detection**: Scans for "Enable Overages" (limit indicator) or "rate limit" warnings.
+- **Topmost Popup**: A red **LIMITS** popup appears and **pauses all automatic actions** for that window.
+- **Manual Acknowledgement**: The user must click **OK** to resume monitoring.
+- **Non-Interaction**: The helper **never** clicks the "Enable Overages" button automatically.
 
 ## 3. Boundary & Title Enforcement
 - **Window Boundaries**: Clicks are strictly confined to the bounding box of the selected IDE window.

@@ -1,23 +1,23 @@
-# AutoHotkey v2 Installation Instructions
+# AutoHotkey v2 Installation Guide
 
-The Antigravity Review Helper requires AutoHotkey v2.0 or higher. Since it is not currently detected on this system, please follow these steps to install it manually.
+This utility requires **AutoHotkey v2** to run.
 
-## 1. Download
-Visit the official AutoHotkey website:
-[https://www.autohotkey.com/](https://www.autohotkey.com/)
-Download the **v2.0** installer (e.g., `AutoHotkey_2.0.x_setup.exe`).
+## Requirements
+- **OS**: Windows 10 or later.
+- **AutoHotkey**: Version 2.0 or higher.
 
-## 2. Installation
-1. Run the downloaded installer.
-2. Choose the default installation options.
-3. Ensure that `.ahk` files are associated with AutoHotkey v2.
+## Installation Steps
+1. Visit the [AutoHotkey Download Page](https://www.autohotkey.com/).
+2. Download and install the **v2** version.
+3. Verify installation by running `AutoHotkey64.exe` or by right-clicking on an `.ahk` script and selecting "Run script".
 
-## 3. Verification
-Once installed, you can verify the installation by running this command in PowerShell:
-```powershell
-where.exe AutoHotkeyUX.exe
-```
-Or simply double-click the script in `scripts/antigravity_review_helper.ahk`.
+## Important Notes for Developers
+- This script is currently being tested in a environment where AutoHotkey v2 is not natively available for shell execution.
+- **Runtime testing cannot be performed without a local installation of AutoHotkey v2.**
+- When running the script for the first time after installation:
+    - Ensure **DRY_RUN_MODE** is checked (enabled by default).
+    - Verify that the helper correctly identifies your IDE windows.
+    - Test the **LIMITS** warning popup by triggering one of the detection phrases (e.g. typing "quota exhausted" in a test file).
 
-## Note on Runtime Testing
-The script has been developed and syntax-verified against AutoHotkey v2 standards, but it **cannot be runtime-tested** until the interpreter is installed. Once installed, follow the `docs/dry_run_testing.md` guide to validate the logic.
+## Safety First
+Always perform your first tests in **Dry Run Mode** to verify that button detection and sanitization are working as expected for your specific screen resolution and scaling settings.

@@ -1,16 +1,14 @@
-# Alert Screenshot Instructions
+# Alerts and Indicators
 
-To improve detection of usage limits and quotas, you can provide an optional screenshot of the warning area.
+This folder contains screenshots used to detect limits and warning states.
 
-## File Requirements
-Save the image in this folder with this exact name:
-- `limit_warning.png`
+## File Requirements (English UI)
 
-## Best Practices for Screenshots
-1. **Source**: Take the screenshot from **Antigravity** when a usage limit warning appears.
-2. **Crop Tight**: Crop the image to include the specific text or icon indicating a limit (e.g., "Daily limit reached" or "Out of credits").
-3. **Accuracy**: Ensure no other UI elements are included in the crop.
-4. **Maintenance**: This image is used as a fallback if UI Automation cannot read the text. It should be retaken if you change your IDE's theme or Windows scaling.
+1.  `limit_warning.png`: The "Enable Overages" button or a similar limits indicator.
+    - **Note**: The helper will **never** click this button. It is only used as a trigger for the red **LIMITS** warning popup.
+    - **Preferred filename**: `assets/buttons/enable_overages_button.png`. If that file exists in the `buttons` folder, it will be used instead of this one.
 
-## Current Status
-- [ ] `limit_warning.png` - **MISSING** (Optional fallback)
+## Guidelines
+- Capture screenshots from an English UI.
+- Use tight crops (minimal background).
+- Do not capture while hovering.

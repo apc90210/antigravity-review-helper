@@ -6,9 +6,9 @@
 ; ==============================================================================
 ; - DRY_RUN_MODE: true (Safety: Enabled by default)
 ; - SAFETY_CONFIRMATION_REQUIRED: true (Shows startup briefing)
-; - ACCEPT BUTTON: MANUAL ONLY BY DEFAULT
+; - ACCEPT ALL AUTO: OFF BY DEFAULT (Requires explicit confirmation)
 ; - DEBUG VIEWER: Triggered on Retry detection or Ctrl+Alt+D
-; - LIMITS ALERT: Blinking red alert for usage/quota warnings
+; - LIMITS ALERT: Simple red warning popup (English-only)
 ; - EMERGENCY EXIT: Ctrl+Alt+Esc
 ; ==============================================================================
 
@@ -27,6 +27,9 @@ global MAX_CLICKS_PER_MIN := 20
 global ALLOWED_TITLES := ["Antigravity", "Visual Studio Code", "Cursor"]
 global FORBIDDEN_TITLES := ["terminal", "powershell", "cmd", "password", "credentials", "ssh", "git", "browser", "chrome", "edge"]
 
+; Tracking missing assets to log only once
+global ContinueAssetMissingLogged := false
+
 ; Limit Detection Phrases
 global LIMIT_PHRASES := [
     "limit", "limits", "usage limit", "limit reached", "reached your limit",
@@ -44,11 +47,20 @@ global REDACT_PATTERNS := [
 ; Asset Paths
 global ASSET_DIR := A_ScriptDir "\..\assets\buttons\"
 global ALERT_DIR := A_ScriptDir "\..\assets\alerts\"
+
+; Assets
 global RETRY_IMG := ASSET_DIR "retry_button.png"
 global CONTINUE_IMG := ASSET_DIR "continue_button.png"
-global ACCEPT_IMG := ASSET_DIR "accept_button.png"
 global COPY_DEBUG_IMG := ASSET_DIR "copy_debug_info_button.png"
-global LIMIT_WARNING_IMG := ALERT_DIR "limit_warning.png"
+
+; Accept All Assets (Preferred -> Fallback)
+global ACCEPT_ALL_IMG := ASSET_DIR "accept_all_button.png"
+global ACCEPT_FALLBACK_IMG := ASSET_DIR "accept_button.png"
+
+; Enable Overages / Limit Assets (Preferred -> Fallback)
+global ENABLE_OVERAGES_IMG := ASSET_DIR "enable_overages_button.png"
+global LIMITS_FALLBACK_IMG := ALERT_DIR "limit_warning.png"
+
 global LOG_FILE := A_ScriptDir "\..\logs\antigravity_review_helper.log"
 global SNAPSHOT_DIR := A_ScriptDir "\..\debug_snapshots\"
 
@@ -58,7 +70,6 @@ MouseGetPos(&LastMouseX, &LastMouseY)
 
 ; Alert Window State
 global AlertGuis := Map() ; hwnd -> Gui Object
-global AlertBlinkState := false
 
 ; ==============================================================================
 ; INITIALIZATION & GUI
@@ -70,7 +81,7 @@ if (SAFETY_CONFIRMATION_REQUIRED)
     msg .= "- UI is English-only.`n"
     msg .= "- Debug text is SANITIZED (redacted) before display/save.`n"
     msg .= "- Retry detection can trigger 'Copy debug info' click.`n"
-    msg .= "- Limits Alert: Blinking window when usage limits detected.`n"
+    msg .= "- Limits Alert: Warning popup when usage limits detected.`n"
     msg .= "- No network access or external file reading.`n`n"
     msg .= "Proceed?"
     if (MsgBox(msg, "Safety Audit", "YesNo Iconi") = "No")
@@ -92,7 +103,7 @@ chkAlwaysOn := MyGui.Add("Checkbox", "x120 y180 vAlwaysOn", "Always On")
 chkRetry := MyGui.Add("Checkbox", "x220 y180 vRetryAuto", "Retry Auto")
 chkContinue := MyGui.Add("Checkbox", "x320 y180 vContinueAuto", "Continue Auto")
 chkAcceptManual := MyGui.Add("Checkbox", "x420 y180 vAcceptManual", "Accept Manual")
-chkAcceptAuto := MyGui.Add("Checkbox", "x20 y210 vAcceptAuto", "Accept All (Auto)")
+chkAcceptAuto := MyGui.Add("Checkbox", "x20 y210 vAcceptAuto", "Accept All Auto")
 chkAcceptAuto.OnEvent("Click", OnAcceptAutoClick)
 chkCopyDebugAuto := MyGui.Add("Checkbox", "x220 y210 vCopyDebugAuto", "Copy Debug Info Auto")
 chkLimitsMonitor := MyGui.Add("Checkbox", "x420 y210 vLimitsMonitor", "Limits Alert Monitor")
@@ -101,7 +112,7 @@ btnStart := MyGui.Add("Button", "x20 y235 w90", "Start")
 btnStart.OnEvent("Click", (*) => SetWindowStatus("Running"))
 btnStop := MyGui.Add("Button", "x120 y235 w90", "Stop")
 btnStop.OnEvent("Click", (*) => SetWindowStatus("Stopped"))
-btnAcceptOnce := MyGui.Add("Button", "x220 y235 w120", "Accept Once")
+btnAcceptOnce := MyGui.Add("Button", "x220 y235 w120", "Accept All Once")
 btnAcceptOnce.OnEvent("Click", OnAcceptOnceClick)
 
 ; Debug Viewer Panel
@@ -177,10 +188,17 @@ OnAcceptAutoClick(ctrl, *)
     hwnd := LV.GetText(RowNumber, 1)
     config := WindowConfigs[hwnd]
     if (ctrl.Value = 1) {
-        if (MsgBox("Accept All can approve changes automatically. Continue?", "DANGER", "YesNo Icon!") = "No") {
+        if (MsgBox("Accept All Auto can approve multiple changes automatically. Continue?", "DANGER", "YesNo Icon!") = "No") {
             ctrl.Value := 0; config.AcceptAuto := 0
-        } else config.AcceptAuto := 1
-    } else config.AcceptAuto := 0
+            LogAction(hwnd, "ACCEPT_ALL_CONFIRMATION_CANCELLED", 0, 0, "")
+        } else {
+            config.AcceptAuto := 1
+            LogAction(hwnd, "ACCEPT_ALL_CONFIRMATION_ACCEPTED", 0, 0, "")
+        }
+    } else {
+        config.AcceptAuto := 0
+        LogAction(hwnd, "ACCEPT_ALL_AUTO_DISABLED", 0, 0, "")
+    }
 }
 
 SetWindowStatus(newStatus) {
@@ -227,13 +245,13 @@ OnAcceptOnceClick(*) {
     hwnd := LV.GetText(RowNumber, 1)
     config := WindowConfigs["" hwnd]
     if (config.AlertActive) {
-        MsgBox("Actions paused due to active Limits Alert.")
+        MsgBox("Actions paused due to active LIMITS warning.")
         return
     }
     if (config.LastAcceptX > 0) {
-        DoClick(hwnd, config.LastAcceptX, config.LastAcceptY, "AcceptOnce")
+        DoClick(hwnd, config.LastAcceptX, config.LastAcceptY, "AcceptAllOnce")
         config.LastAcceptX := 0; config.LastAcceptY := 0
-    } else MsgBox("No Accept button detected recently.")
+    } else MsgBox("No Accept All button detected recently.")
 }
 
 OnCopySanitized(*) {
@@ -428,18 +446,22 @@ ScanForLimits(hwnd)
         }
     }
 
-    ; Method B: Image Detection Fallback
-    if (method = "NONE" and FileExist(LIMIT_WARNING_IMG)) {
+    ; Method B: Image Detection Fallback (Enable Overages)
+    if (method = "NONE") {
         WinGetPos(&x, &y, &w, &h, "ahk_id " hwnd)
-        if (ScanForButton(LIMIT_WARNING_IMG, x, y, x+w, y+h, &fX, &fY)) {
-            method := "IMAGE"
+        ; Try preferred, then fallback
+        if (ScanForButton(ENABLE_OVERAGES_IMG, x, y, x+w, y+h, &fX, &fY)) {
+            method := "IMAGE_PREFERRED"
+        } else if (ScanForButton(LIMITS_FALLBACK_IMG, x, y, x+w, y+h, &fX, &fY)) {
+            method := "IMAGE_FALLBACK"
         }
     }
 
     if (method != "NONE") {
         if (!config.AlertActive) {
             config.AlertActive := true
-            LogAction(hwnd, "LIMIT_WARNING_DETECTED_" method, 0, 0, matchInfo)
+            LogAction(hwnd, "ENABLE_OVERAGES_DETECTED", 0, 0, method)
+            LogAction(hwnd, "LIMIT_WARNING_DETECTED_IMAGE", 0, 0, matchInfo)
             OpenAlertWindow(hwnd, method, matchInfo)
         } else if (A_TickCount - config.LastLimitLog > 10000) {
             config.LastLimitLog := A_TickCount
@@ -452,41 +474,31 @@ ScanForLimits(hwnd)
 
 OpenAlertWindow(targetHwnd, method, matchInfo)
 {
+    ; Prevent duplicate popup spam
+    if (AlertGuis.Has("" targetHwnd)) {
+        try AlertGuis["" targetHwnd].Show()
+        return
+    }
+
     title := WinGetTitle("ahk_id " targetHwnd)
     
-    AlertGui := Gui("+AlwaysOnTop -MinimizeBox +Owner" MyGui.Hwnd, "Antigravity Review Helper - Limits Alert")
+    AlertGui := Gui("+AlwaysOnTop -MinimizeBox +Owner" MyGui.Hwnd, "Antigravity Review Helper - Warning")
     AlertGui.BackColor := "Red"
-    AlertGui.SetFont("s24 w700", "Segoe UI")
+    AlertGui.SetFont("s48 w700", "Segoe UI")
     AlertGui.Add("Text", "Center w400 cWhite", "LIMITS")
     AlertGui.SetFont("s10 w400", "Segoe UI")
-    AlertGui.Add("Text", "Center w400 cWhite", "Target: " title "`nMethod: " method (matchInfo ? " (" matchInfo ")" : ""))
     
-    btnStopThis := AlertGui.Add("Button", "w100 h30 x20", "Stop This")
-    btnStopThis.OnEvent("Click", (*) => (StopThisWindow(targetHwnd), AlertGui.Destroy()))
-    
-    btnStopAll := AlertGui.Add("Button", "w100 h30 x130 yp", "Stop All")
-    btnStopAll.OnEvent("Click", (*) => (StopAll(), AlertGui.Destroy()))
-    
-    btnClear := AlertGui.Add("Button", "w100 h30 x240 yp", "Clear Alert")
-    btnClear.OnEvent("Click", (*) => (ClearAlert(targetHwnd), AlertGui.Destroy()))
-    
-    btnOpenMain := AlertGui.Add("Button", "w100 h30 x350 yp", "Main UI")
-    btnOpenMain.OnEvent("Click", (*) => MyGui.Show())
+    btnOk := AlertGui.Add("Button", "w100 h30 x150 y150", "OK")
+    btnOk.OnEvent("Click", (*) => OnAlertOk(targetHwnd))
 
     AlertGuis["" targetHwnd] := AlertGui
-    AlertGui.Show("w450 h200")
-    SoundBeep(750, 500)
-    
-    LogAction(targetHwnd, "LIMIT_ALERT_OPENED", 0, 0, method)
+    AlertGui.Show("w400 h200")
+    LogAction(targetHwnd, "LIMIT_POPUP_OPENED", 0, 0, method)
 }
 
-StopThisWindow(hwnd) {
-    if (WindowConfigs.Has("" hwnd)) {
-        WindowConfigs["" hwnd].Status := "Stopped"
-        ClearAlert(hwnd)
-        RefreshWindowList() ; Update LV
-        LogAction(hwnd, "LIMIT_ALERT_STOP_THIS_WINDOW", 0, 0, "")
-    }
+OnAlertOk(hwnd) {
+    ClearAlert(hwnd)
+    LogAction(hwnd, "LIMIT_POPUP_CLOSED", 0, 0, "")
 }
 
 ClearAlert(hwnd) {
@@ -496,24 +508,7 @@ ClearAlert(hwnd) {
             try AlertGuis["" hwnd].Destroy()
             AlertGuis.Delete("" hwnd)
         }
-        LogAction(hwnd, "LIMIT_ALERT_CLEARED", 0, 0, "")
     }
-}
-
-; Blinking Timer
-SetTimer(BlinkAlerts, 500)
-BlinkAlerts() {
-    global AlertBlinkState
-    AlertBlinkState := !AlertBlinkState
-    for hwnd, alertGui in AlertGuis {
-        try alertGui.BackColor := AlertBlinkState ? "Red" : "Maroon"
-    }
-}
-
-; Periodic Beep Timer
-SetTimer(AlertBeep, 10000)
-AlertBeep() {
-    if (AlertGuis.Count > 0) SoundBeep(500, 200)
 }
 
 ; ==============================================================================
@@ -531,7 +526,7 @@ AlertBeep() {
         config := WindowConfigs["" hwnd]
         if (config.AlertActive) return
         if (config.LastAcceptX > 0) {
-            DoClick(hwnd, config.LastAcceptX, config.LastAcceptY, "AcceptHotkey")
+            DoClick(hwnd, config.LastAcceptX, config.LastAcceptY, "AcceptAllHotkey")
             config.LastAcceptX := 0; config.LastAcceptY := 0
         }
     }
@@ -578,10 +573,17 @@ MainLoop()
         x := 0, y := 0, w := 0, h := 0
         WinGetPos(&x, &y, &w, &h, "ahk_id " hwnd)
 
-        ; Prioritize Accept
-        if (ScanForButton(ACCEPT_IMG, x, y, x+w, y+h, &foundX, &foundY)) {
+        ; Prioritize Accept All
+        foundAccept := false
+        if (ScanForButton(ACCEPT_ALL_IMG, x, y, x+w, y+h, &foundX, &foundY)) {
+            foundAccept := true
+        } else if (ScanForButton(ACCEPT_FALLBACK_IMG, x, y, x+w, y+h, &foundX, &foundY)) {
+            foundAccept := true
+        }
+
+        if (foundAccept) {
             config.LastAcceptX := foundX, config.LastAcceptY := foundY
-            if (config.AcceptAuto) DoClick(hwnd, foundX, foundY, "AcceptAuto")
+            if (config.AcceptAuto) DoClick(hwnd, foundX, foundY, "AcceptAllAuto")
             else if (config.AcceptManual) LogAction(hwnd, "ACCEPT_WAITING_MANUAL_APPROVAL", foundX, foundY, "")
             continue
         }
@@ -601,9 +603,17 @@ MainLoop()
             continue
         }
 
-        ; Continue
-        if (config.ContinueAuto and ScanForButton(CONTINUE_IMG, x, y, x+w, y+h, &foundX, &foundY)) {
-            DoClick(hwnd, foundX, foundY, "Continue")
+        ; Continue (Optional Asset)
+        if (config.ContinueAuto) {
+            if (!FileExist(CONTINUE_IMG)) {
+                global ContinueAssetMissingLogged
+                if (!ContinueAssetMissingLogged) {
+                    LogAction(hwnd, "CONTINUE_ASSET_MISSING", 0, 0, "")
+                    ContinueAssetMissingLogged := true
+                }
+            } else if (ScanForButton(CONTINUE_IMG, x, y, x+w, y+h, &foundX, &foundY)) {
+                DoClick(hwnd, foundX, foundY, "Continue")
+            }
         }
     }
 }
@@ -631,12 +641,19 @@ DoClick(hwnd, clickX, clickY, type)
         LogAction(hwnd, "SKIPPED_OUTSIDE_WINDOW", clickX, clickY, type); return
     }
     if (!CheckRateLimit(hwnd)) return
+    
     if (DRY_RUN_MODE) {
-        LogAction(hwnd, "DRY_RUN_" type "_DETECTED", clickX, clickY, "Dry Run"); return
+        event := "DRY_RUN_" type "_DETECTED"
+        if (type = "AcceptAllAuto") event := "DRY_RUN_ACCEPT_ALL_DETECTED"
+        LogAction(hwnd, event, clickX, clickY, "Dry Run"); return
     }
+    
     CoordMode "Mouse", "Screen"
     Click(clickX, clickY)
-    LogAction(hwnd, "CLICKED_" type, clickX, clickY, "Live")
+    
+    event := "CLICKED_" type
+    if (type = "AcceptAllAuto") event := "CLICKED_ACCEPT_ALL_AUTO"
+    LogAction(hwnd, event, clickX, clickY, "Live")
 }
 
 CheckRateLimit(hwnd) {
