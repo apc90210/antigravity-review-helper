@@ -66,6 +66,13 @@ This document outlines the steps for manually validating the Antigravity Review 
 6. Select the correct project/window from the list again.
 7. Click **Start Selected**.
 
+### "Accept All" visible but not detected
+If the button is visible in Antigravity but not logged in the helper:
+1. Verify the correct row is selected in the window list.
+2. Click **Test Selected Window** to run a diagnostic scan.
+3. Inspect the helper log for `TEST_ACCEPT_ALL_FOUND` or `TEST_ACCEPT_ALL_NOT_FOUND`.
+4. If `NOT_FOUND` persists, recapture `accept_button.png` from your screen at 100% scale and replace the file in `assets/buttons/`.
+
 ### Helper Status shows "Stopped" automatically
 **Cause**: The helper detected that the monitored window is no longer available and automatically stopped monitoring to prevent a crash.
 

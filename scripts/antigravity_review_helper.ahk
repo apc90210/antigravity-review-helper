@@ -127,9 +127,10 @@ btnSaveSnapshot.OnEvent("Click", OnSaveSnapshot)
 MyGui.Add("Button", "x10 y480 w100", "Refresh List").OnEvent("Click", RefreshWindowList)
 MyGui.Add("Button", "x120 y480 w100", "Start Selected").OnEvent("Click", (*) => UpdateStatus("Running"))
 MyGui.Add("Button", "x230 y480 w100", "Stop Selected").OnEvent("Click", (*) => UpdateStatus("Stopped"))
-MyGui.Add("Button", "x340 y480 w100", "Stop All").OnEvent("Click", StopAll)
-MyGui.Add("Button", "x450 y480 w100", "Clear Log").OnEvent("Click", OnClearLog)
-MyGui.Add("Button", "x560 y480 w50", "Exit").OnEvent("Click", (*) => ExitApp())
+MyGui.Add("Button", "x340 y480 w120", "Test Selected Window").OnEvent("Click", OnTestSelected)
+MyGui.Add("Button", "x470 y480 w70", "Stop All").OnEvent("Click", StopAll)
+MyGui.Add("Button", "x550 y480 w70", "Clear Log").OnEvent("Click", OnClearLog)
+MyGui.Add("Button", "x630 y480 w40", "Exit").OnEvent("Click", (*) => ExitApp())
 
 chkDryRunGlobal := MyGui.Add("Checkbox", "x10 y505 Checked", "Global Dry Run Mode (Safety)")
 chkDryRunGlobal.OnEvent("Click", OnDryRunToggle)
@@ -137,7 +138,7 @@ chkDryRunGlobal.OnEvent("Click", OnDryRunToggle)
 global txtGlobalStatus := MyGui.Add("Text", "x10 y525 w600 cBlue", "Helper: RUNNING | Dry Run: ON")
 MyGui.Add("Text", "x450 y525 w160 cGray Right", "Emergency: Ctrl+Alt+Esc")
 
-MyGui.Show("w620 h550")
+MyGui.Show("w680 h550")
 RefreshWindowList()
 ; SetTimer(RefreshWindowList, 5000) ; DISABLED to prevent selection loss and stale HWND access
 
@@ -331,6 +332,75 @@ UpdateStatus(newStatus)
     }
 }
 
+OnTestSelected(*)
+{
+    RowNumber := MainLV.GetNext()
+    if (RowNumber = 0)
+    {
+        MsgBox("No window selected.", "Selection Required", "Icon!")
+        return
+    }
+    hwnd := MainLV.GetText(RowNumber, 1)
+    if (!SafeWinExists(hwnd))
+    {
+        MsgBox("Selected window no longer exists.", "Window Not Found", "Icon!")
+        return
+    }
+    
+    title := SafeWinGetTitle(hwnd)
+    project := ExtractProjectName(title)
+    LogAction(hwnd, "TEST_SELECTED_WINDOW_BEGIN", 0, 0, "Title: " title " | Project: " project)
+    
+    if (!SafeWinGetPos(hwnd, &x, &y, &w, &h))
+    {
+        LogAction(hwnd, "TEST_WINDOW_POS_FAILED", 0, 0, "")
+        return
+    }
+    
+    results := "Diagnostic Results for " project ":`n`n"
+    
+    ; Test Retry
+    if (ScanForButton(RETRY_IMG, x, y, x+w, y+h, &fX, &fY, 50)) {
+        LogAction(hwnd, "TEST_RETRY_FOUND", fX, fY, "")
+        results .= "- Retry: FOUND`n"
+    } else {
+        LogAction(hwnd, "TEST_RETRY_NOT_FOUND", 0, 0, "")
+        results .= "- Retry: NOT FOUND`n"
+    }
+    
+    ; Test Copy Debug
+    if (ScanForButton(COPY_DEBUG_IMG, x, y, x+w, y+h, &fX, &fY, 50)) {
+        LogAction(hwnd, "TEST_COPY_DEBUG_FOUND", fX, fY, "")
+        results .= "- Copy Debug: FOUND`n"
+    } else {
+        LogAction(hwnd, "TEST_COPY_DEBUG_NOT_FOUND", 0, 0, "")
+        results .= "- Copy Debug: NOT FOUND`n"
+    }
+    
+    ; Test Accept All
+    if (ScanForButton(ACCEPT_ALL_IMG, x, y, x+w, y+h, &fX, &fY, 80)) {
+        LogAction(hwnd, "TEST_ACCEPT_ALL_FOUND", fX, fY, "Primary")
+        results .= "- Accept All (Primary): FOUND`n"
+    } else if (ScanForButton(ACCEPT_FALLBACK_IMG, x, y, x+w, y+h, &fX, &fY, 80)) {
+        LogAction(hwnd, "TEST_ACCEPT_ALL_FOUND", fX, fY, "Fallback")
+        results .= "- Accept All (Fallback): FOUND`n"
+    } else {
+        LogAction(hwnd, "TEST_ACCEPT_ALL_NOT_FOUND", 0, 0, "")
+        results .= "- Accept All: NOT FOUND`n"
+    }
+    
+    ; Test Limits
+    if (ScanForButton(ENABLE_OVERAGES_IMG, x, y, x+w, y+h, &fX, &fY, 50) or ScanForButton(LIMITS_FALLBACK_IMG, x, y, x+w, y+h, &fX, &fY, 50)) {
+        LogAction(hwnd, "TEST_LIMIT_FOUND", fX, fY, "")
+        results .= "- Limits Warning: FOUND`n"
+    } else {
+        LogAction(hwnd, "TEST_LIMIT_NOT_FOUND", 0, 0, "")
+        results .= "- Limits Warning: NOT FOUND`n"
+    }
+    
+    MsgBox(results, "Diagnostic Results", "Iconi")
+}
+
 StopAll(*)
 {
     for hwnd, config in WindowConfigs
@@ -370,7 +440,7 @@ RefreshWindowList(*)
         
         if (isMatch)
         {
-            config := {Enabled: 0, AlwaysOn: 0, RetryAuto: 0, ContinueAuto: 0, AcceptManual: 1, AcceptAuto: 0, CopyDebugAuto: 0, LimitsMonitor: 1, Status: "Stopped", LastAcceptX: 0, LastAcceptY: 0, LastRetryTime: "", LastCaptureStatus: "Idle", CapturedText: "", AlertActive: false, LastLimitLog: 0}
+            config := {Enabled: 0, AlwaysOn: 0, RetryAuto: 0, ContinueAuto: 0, AcceptManual: 1, AcceptAuto: 0, CopyDebugAuto: 0, LimitsMonitor: 1, Status: "Stopped", LastAcceptX: 0, LastAcceptY: 0, LastRetryTime: "", LastCaptureStatus: "Idle", CapturedText: "", AlertActive: false, LastLimitLog: 0, LastScanLogTime: 0}
             if (oldConfigs.Has("" hwnd))
                 config := oldConfigs["" hwnd]
             
@@ -673,6 +743,15 @@ MainLoop()
         if (!SafeWinGetPos(hwnd, &x, &y, &w, &h))
             continue
         
+        ; Rate-limited Diagnostic Logging (every 3s during Dry Run + Running)
+        if (DRY_RUN_MODE and config.Status = "Running" and A_TickCount - config.LastScanLogTime > 3000) {
+            config.LastScanLogTime := A_TickCount
+            title := SafeWinGetTitle(hwnd)
+            project := ExtractProjectName(title)
+            diag := "RECT: " x "," y "," w "," h " | ASSET: " (FileExist(ACCEPT_ALL_IMG) ? "YES" : "NO")
+            LogAction(hwnd, "SELECTED_SCAN_BEGIN", 0, 0, diag)
+        }
+
         global ContinueAssetMissingLogged
         if (!ContinueAssetMissingLogged and !FileExist(CONTINUE_IMG)) {
             LogAction(hwnd, "CONTINUE_ASSET_MISSING", 0, 0, "MISSING_OK")
@@ -680,9 +759,9 @@ MainLoop()
         }
 
         fX := 0, fY := 0, foundAccept := false
-        if (ScanForButton(ACCEPT_ALL_IMG, x, y, x+w, y+h, &fX, &fY))
+        if (ScanForButton(ACCEPT_ALL_IMG, x, y, x+w, y+h, &fX, &fY, 80))
             foundAccept := true
-        else if (ScanForButton(ACCEPT_FALLBACK_IMG, x, y, x+w, y+h, &fX, &fY))
+        else if (ScanForButton(ACCEPT_FALLBACK_IMG, x, y, x+w, y+h, &fX, &fY, 80))
             foundAccept := true
 
         if (foundAccept) {
@@ -709,11 +788,11 @@ MainLoop()
     }
 }
 
-ScanForButton(imgPath, x1, y1, x2, y2, &fX, &fY) {
+ScanForButton(imgPath, x1, y1, x2, y2, &fX, &fY, tolerance := 50) {
     if (!FileExist(imgPath))
         return false
     CoordMode "Pixel", "Screen"
-    if ImageSearch(&fX, &fY, x1, y1, x2, y2, "*50 " imgPath)
+    if ImageSearch(&fX, &fY, x1, y1, x2, y2, "*" tolerance " " imgPath)
     {
         fX += 10
         fY += 10
