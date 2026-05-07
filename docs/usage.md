@@ -15,11 +15,16 @@ If the helper detects an "Enable Overages" button or a usage limit warning:
 - **Manual Mode**: If detected, it saves the location. Press **Ctrl+Alt+A** or click **Accept All Once** to click it.
 - **Auto Mode**: Requires explicit confirmation to enable. Once enabled, it will click the button automatically when detected.
 
-## Action Settings
+## Action Settings (Per-Window)
+- **Action checkboxes** (Retry, Continue, etc.) are stored **per selected window**.
+- When you switch between project windows in the list, the helper restores the saved checkbox choices for that specific window.
+- **Enabled**: Must be checked for the helper to monitor the window.
+- **Always On**: Monitor even if the status is not "Running".
 - **Retry Auto**: Enable to auto-click "Retry".
 - **Copy Debug Info Auto**: Enable to allow auto-clicking "Copy debug info" during Retry events (OFF by default).
 - **Limits Alert Monitor**: Enable to scan for usage limits (ON by default).
 - **Accept All Auto**: Dangerous mode, requires confirmation.
+- **Start Selected**: Clicking this saves the current checkbox state into the window's runtime config and begins monitoring.
 
 ## Continue Auto (Optional)
 - Detection for the "Continue" button is skipped if `continue_button.png` is missing.
@@ -51,4 +56,3 @@ A visible scrolling log that shows the most recent 500 events:
 - **Global Dry Run Mode (Safety)**: When checked (default), the helper will log detections and increment counters but **never** click real buttons.
 - To enable live clicks, uncheck the box and accept the **DANGER** confirmation.
 - The status bar will turn **RED** and show **LIVE CLICKS ENABLED** when Dry Run is OFF.
-

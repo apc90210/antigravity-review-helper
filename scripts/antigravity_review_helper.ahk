@@ -24,6 +24,8 @@ global ContinueAssetMissingLogged := false
 global EventCounters := Map()
 global CounterControls := Map() ; Map counter name -> Text control object
 global EventLogLV := 0 ; Global reference for Live Log ListView
+global CurrentSelectedHwnd := 0
+global IsLoadingConfigIntoControls := false
 
 ; Limit Detection Phrases
 global LIMIT_PHRASES := [
@@ -142,15 +144,22 @@ btnResetCounters.OnEvent("Click", (*) => ResetCounters())
 ; Configuration Pane
 MyGui.Add("GroupBox", "x10 y160 w550 h100", "Selected Window Configuration")
 chkEnabled := MyGui.Add("Checkbox", "x20 y180", "Enabled")
+chkEnabled.OnEvent("Click", OnCheckboxClick)
 chkAlwaysOn := MyGui.Add("Checkbox", "x100 y180", "Always On")
+chkAlwaysOn.OnEvent("Click", OnCheckboxClick)
 chkRetry := MyGui.Add("Checkbox", "x200 y180", "Retry Auto")
+chkRetry.OnEvent("Click", OnCheckboxClick)
 chkContinue := MyGui.Add("Checkbox", "x300 y180", "Continue Auto")
+chkContinue.OnEvent("Click", OnCheckboxClick)
 chkAcceptManual := MyGui.Add("Checkbox", "x420 y180", "Accept Manual (Prompt)")
+chkAcceptManual.OnEvent("Click", OnCheckboxClick)
 chkAcceptAuto := MyGui.Add("Checkbox", "x20 y205 cRed", "Accept All Auto (CAUTION)")
 chkAcceptAuto.OnEvent("Click", OnAcceptAutoClick)
 
 chkCopyDebugAuto := MyGui.Add("Checkbox", "x200 y205", "Copy Debug Info Auto")
+chkCopyDebugAuto.OnEvent("Click", OnCheckboxClick)
 chkLimitsMonitor := MyGui.Add("Checkbox", "x420 y205 Checked", "Limits Alert Monitor")
+chkLimitsMonitor.OnEvent("Click", OnCheckboxClick)
 
 ; Debug Viewer Panel (Left)
 MyGui.Add("GroupBox", "x10 y270 w550 h200", "Debug Viewer (Sanitized)")
@@ -211,6 +220,64 @@ ExtractProjectName(title)
         return (name != "") ? name : "Unknown Project"
     }
     return "Unknown Project"
+}
+
+SaveCurrentSelectionConfig() {
+    global CurrentSelectedHwnd, WindowConfigs
+    global chkEnabled, chkAlwaysOn, chkRetry, chkContinue, chkCopyDebugAuto, chkAcceptManual, chkLimitsMonitor
+
+    hwndStr := "" CurrentSelectedHwnd
+    if (!CurrentSelectedHwnd or !WindowConfigs.Has(hwndStr))
+        return false
+
+    config := WindowConfigs[hwndStr]
+    config.Enabled := chkEnabled.Value
+    config.AlwaysOn := chkAlwaysOn.Value
+    config.RetryAuto := chkRetry.Value
+    config.ContinueAuto := chkContinue.Value
+    config.CopyDebugAuto := chkCopyDebugAuto.Value
+    config.AcceptManual := chkAcceptManual.Value
+    config.LimitsMonitor := chkLimitsMonitor.Value
+
+    WindowConfigs[hwndStr] := config
+    LogAction(CurrentSelectedHwnd, "WINDOW_CONFIG_SAVED", 0, 0, "from GUI controls")
+    return true
+}
+
+LoadConfigIntoControls(hwnd) {
+    global WindowConfigs, IsLoadingConfigIntoControls
+    global chkEnabled, chkAlwaysOn, chkRetry, chkContinue, chkCopyDebugAuto, chkAcceptManual, chkLimitsMonitor
+    global txtCaptureStatus, txtRedactionStatus, editDebugText
+
+    hwndStr := "" hwnd
+    if (!WindowConfigs.Has(hwndStr))
+        return
+
+    config := WindowConfigs[hwndStr]
+    IsLoadingConfigIntoControls := true
+    
+    chkEnabled.Value := config.Enabled ? 1 : 0
+    chkAlwaysOn.Value := config.AlwaysOn ? 1 : 0
+    chkRetry.Value := config.RetryAuto ? 1 : 0
+    chkContinue.Value := config.ContinueAuto ? 1 : 0
+    chkCopyDebugAuto.Value := config.CopyDebugAuto ? 1 : 0
+    chkAcceptManual.Value := config.AcceptManual ? 1 : 0
+    chkAcceptAuto.Value := config.AcceptAuto ? 1 : 0
+    chkLimitsMonitor.Value := config.LimitsMonitor ? 1 : 0
+    
+    txtCaptureStatus.Value := "Last Detection: " (config.LastRetryTime ? config.LastRetryTime : "None")
+    txtRedactionStatus.Value := "Redaction Status: " (config.LastCaptureStatus ? config.LastCaptureStatus : "Idle")
+    editDebugText.Value := config.CapturedText ? config.CapturedText : ""
+    
+    IsLoadingConfigIntoControls := false
+    LogAction(hwnd, "WINDOW_CONFIG_LOADED", 0, 0, "to GUI controls")
+}
+
+OnCheckboxClick(*) {
+    global IsLoadingConfigIntoControls
+    if (IsLoadingConfigIntoControls)
+        return
+    SaveCurrentSelectionConfig()
 }
 
 ; --- Counter Functions ---
@@ -363,31 +430,20 @@ OnClearLog(*) {
 
 OnLVClick(targetLV, RowNumber)
 {
+    global CurrentSelectedHwnd
     if (RowNumber = 0)
         return
-    hwnd := targetLV.GetText(RowNumber, 1)
-    if (!WindowConfigs.Has(hwnd))
-        return
-    config := WindowConfigs[hwnd]
-    chkEnabled.Value := config.Enabled
-    chkAlwaysOn.Value := config.AlwaysOn
-    chkRetry.Value := config.RetryAuto
-    chkContinue.Value := config.ContinueAuto
-    chkAcceptManual.Value := config.AcceptManual
-    chkAcceptAuto.Value := config.AcceptAuto
-    chkCopyDebugAuto.Value := config.CopyDebugAuto
-    chkLimitsMonitor.Value := config.LimitsMonitor
-    txtCaptureStatus.Value := "Last Detection: " (config.LastRetryTime ? config.LastRetryTime : "None")
-    txtRedactionStatus.Value := "Redaction Status: " (config.LastCaptureStatus ? config.LastCaptureStatus : "Idle")
-    editDebugText.Value := config.CapturedText ? config.CapturedText : ""
     
-    chkEnabled.OnEvent("Click", (ctrl, *) => (config.Enabled := ctrl.Value))
-    chkAlwaysOn.OnEvent("Click", (ctrl, *) => (config.AlwaysOn := ctrl.Value))
-    chkRetry.OnEvent("Click", (ctrl, *) => (config.RetryAuto := ctrl.Value))
-    chkContinue.OnEvent("Click", (ctrl, *) => (config.ContinueAuto := ctrl.Value))
-    chkAcceptManual.OnEvent("Click", (ctrl, *) => (config.AcceptManual := ctrl.Value))
-    chkCopyDebugAuto.OnEvent("Click", (ctrl, *) => (config.CopyDebugAuto := ctrl.Value))
-    chkLimitsMonitor.OnEvent("Click", (ctrl, *) => (config.LimitsMonitor := ctrl.Value))
+    ; 1. Save config for previous window
+    SaveCurrentSelectionConfig()
+    
+    ; 2. Update selection
+    hwnd := targetLV.GetText(RowNumber, 1)
+    CurrentSelectedHwnd := Number(hwnd)
+    
+    ; 3. Load config for new window
+    LogAction(CurrentSelectedHwnd, "WINDOW_SELECTION_CHANGED", 0, 0, "")
+    LoadConfigIntoControls(CurrentSelectedHwnd)
 }
 
 OnAcceptAutoClick(ctrl, *)
@@ -423,6 +479,7 @@ OnAcceptAutoClick(ctrl, *)
 
 UpdateStatus(newStatus)
 {
+    global CurrentSelectedHwnd
     RowNumber := MainLV.GetNext()
     if (RowNumber = 0)
     {
@@ -430,7 +487,15 @@ UpdateStatus(newStatus)
         MsgBox("No window selected.", "Selection Required", "Icon!")
         return
     }
-    hwnd := MainLV.GetText(RowNumber, 1)
+    hwndStr := MainLV.GetText(RowNumber, 1)
+    hwnd := Number(hwndStr)
+    
+    ; 1. Sync CurrentSelectedHwnd
+    CurrentSelectedHwnd := hwnd
+    
+    ; 2. Save current GUI config to WindowConfigs before starting
+    SaveCurrentSelectionConfig()
+
     if (!SafeWinExists(hwnd))
     {
         MsgBox("Selected window no longer exists. Click Refresh List and select the project again.", "Window Not Found", "Icon!")
@@ -466,21 +531,29 @@ UpdateStatus(newStatus)
         }
     }
 
-    if (WindowConfigs.Has(hwnd))
+    if (WindowConfigs.Has(hwndStr))
     {
-        WindowConfigs[hwnd].Status := newStatus
+        config := WindowConfigs[hwndStr]
+        config.Status := newStatus
         MainLV.Modify(RowNumber, , , newStatus)
         LogAction(hwnd, "STATUS_CHANGED", 0, 0, newStatus)
+        
+        ; Log detailed runtime state for debugging
+        stateNote := "Enabled=" config.Enabled " Retry=" config.RetryAuto " Accept=" config.AcceptAuto " Limits=" config.LimitsMonitor " Status=" config.Status
+        LogAction(hwnd, "WINDOW_CONFIG_RUNTIME_STATE", 0, 0, stateNote)
     }
 }
 
 StopAll(*)
 {
-    for hwnd, config in WindowConfigs
+    ; Save current selection config before stopping all
+    SaveCurrentSelectionConfig()
+    
+    for hwndStr, config in WindowConfigs
     {
         config.Status := "Stopped"
         if (config.AlertActive)
-            ClearAlert(hwnd)
+            ClearAlert(Number(hwndStr))
     }
     Loop MainLV.GetCount()
         MainLV.Modify(A_Index, , , "Stopped")
@@ -489,9 +562,15 @@ StopAll(*)
 
 RefreshWindowList(*)
 {
+    global CurrentSelectedHwnd
+    
+    ; 1. Save current config before refresh
+    SaveCurrentSelectionConfig()
+
     MainLV.Delete()
     oldConfigs := WindowConfigs.Clone()
     WindowConfigs.Clear()
+    
     for hwnd in WinGetList()
     {
         title := SafeWinGetTitle(hwnd)
@@ -513,14 +592,34 @@ RefreshWindowList(*)
         
         if (isMatch)
         {
+            hwndStr := "" hwnd
             config := {Enabled: 0, AlwaysOn: 0, RetryAuto: 0, ContinueAuto: 0, AcceptManual: 1, AcceptAuto: 0, CopyDebugAuto: 0, LimitsMonitor: 1, Status: "Stopped", LastAcceptX: 0, LastAcceptY: 0, LastRetryTime: "", LastCaptureStatus: "Idle", CapturedText: "", AlertActive: false, LastLimitLog: 0, LastScanLogTime: 0}
-            if (oldConfigs.Has("" hwnd))
-                config := oldConfigs["" hwnd]
             
-            WindowConfigs["" hwnd] := config
-            MainLV.Add(, hwnd, config.Status, project, title)
+            if (oldConfigs.Has(hwndStr)) {
+                config := oldConfigs[hwndStr]
+                LogAction(hwnd, "WINDOW_CONFIG_PRESERVED", 0, 0, "")
+            } else {
+                LogAction(hwnd, "WINDOW_CONFIG_CREATED", 0, 0, "")
+            }
+            
+            WindowConfigs[hwndStr] := config
+            MainLV.Add(, hwndStr, config.Status, project, title)
         }
     }
+    
+    ; 2. Reload config into controls if the selected window still exists
+    if (CurrentSelectedHwnd and WindowConfigs.Has("" CurrentSelectedHwnd)) {
+        LoadConfigIntoControls(CurrentSelectedHwnd)
+        
+        ; Re-select in ListView if possible
+        Loop MainLV.GetCount() {
+            if (MainLV.GetText(A_Index, 1) = "" CurrentSelectedHwnd) {
+                MainLV.Modify(A_Index, "Select Focus")
+                break
+            }
+        }
+    }
+    
     LogAction(0, "REFRESH_WINDOW_LIST", 0, 0, "Count: " MainLV.GetCount())
 }
 
@@ -782,6 +881,15 @@ MainLoop()
     {
         hwnd := Number(hwndStr)
         x := 0, y := 0, w := 0, h := 0, fX := 0, fY := 0, cX := 0, cY := 0
+        
+        ; Rate-limited diagnostic log for running windows (every 10s)
+        now := A_TickCount
+        if (config.Status = "Running" and now - config.LastScanLogTime > 10000) {
+            stateNote := "Enabled=" config.Enabled " Status=" config.Status " Retry=" config.RetryAuto " Accept=" config.AcceptAuto " Limits=" config.LimitsMonitor " Dry=" (DRY_RUN_MODE ? "ON" : "OFF")
+            LogAction(hwnd, "MAINLOOP_CONFIG_STATE", 0, 0, stateNote)
+            config.LastScanLogTime := now
+        }
+
         ; Hardened check: only Running or AlwaysOn
         if (!config.Enabled or (config.Status != "Running" and !config.AlwaysOn))
             continue
