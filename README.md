@@ -17,6 +17,25 @@ The helper uses standardized assets with fallbacks:
 - **Accept All**: `accept_all_button.png` (Preferred) or `accept_button.png` (Fallback).
 - **Enable Overages / Limits**: `enable_overages_button.png` (Preferred) or `limit_warning.png` (Fallback).
 
+## Current Distribution Mode
+
+> **Source code only — no EXE is distributed.**
+
+The project is currently distributed as **source code** and must be run directly with AutoHotkey v2.
+
+- EXE compilation via Ahk2Exe was **intentionally deferred** after Windows Defender warned during installer download.
+- **Do not disable Windows Defender** or add broad exclusions to build this.
+- Ahk2Exe compilation may be revisited later in a clean VM, via GitHub Actions, or using verified official artifacts.
+- **Keep `DRY_RUN_MODE = true`** until local dry-run behavior is fully validated on your machine.
+
+### How to Run
+
+```powershell
+& "C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe" "C:\antigravity-review-helper\scripts\antigravity_review_helper.ahk"
+```
+
+Or right-click `scripts\antigravity_review_helper.ahk` → **Run script** (if `.ahk` files are associated with AutoHotkey v2).
+
 ## Requirements
 - **Windows 10**
 - **AutoHotkey v2** ([Installation Guide](docs/install_autohotkey_v2.md))

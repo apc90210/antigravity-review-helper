@@ -19,5 +19,32 @@ This utility requires **AutoHotkey v2** to run.
     - Verify that the helper correctly identifies your IDE windows.
     - Test the **LIMITS** warning popup by triggering one of the detection phrases (e.g. typing "quota exhausted" in a test file).
 
+## Current Distribution Mode
+
+This project is distributed as **source code only**. No compiled EXE is included.
+
+**Reason:** Windows Defender issued a warning during the Ahk2Exe compiler installation.  
+To avoid any security risk, the EXE build was intentionally deferred.
+
+**Do not:**
+- Disable Windows Defender to build the EXE.
+- Add broad Defender exclusions for this project.
+- Download unofficial Ahk2Exe builds from unverified sources.
+
+**EXE build may be revisited later** using:
+- A clean virtual machine.
+- GitHub Actions with a verified Ahk2Exe release.
+- Official AutoHotkey/Ahk2Exe GitHub release artifacts.
+
+### Run Command
+
+Run the script directly with AutoHotkey v2:
+
+```powershell
+& "C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe" "C:\antigravity-review-helper\scripts\antigravity_review_helper.ahk"
+```
+
+Or right-click `scripts\antigravity_review_helper.ahk` → **Run script**.
+
 ## Safety First
 Always perform your first tests in **Dry Run Mode** to verify that button detection and sanitization are working as expected for your specific screen resolution and scaling settings.
