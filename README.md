@@ -1,5 +1,8 @@
 # Antigravity Review Helper v4
 
+> **Current Status: `v0.1.0-source-only`**  
+> Run with AutoHotkey v2 · EXE build deferred · `DRY_RUN_MODE` enabled by default · `Accept All Auto` OFF by default
+
 A standalone Windows 10 desktop utility to assist with repetitive UI review actions in Antigravity, VS Code, and Cursor.
 
 ## Features (v4)
