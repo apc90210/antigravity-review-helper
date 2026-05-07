@@ -31,6 +31,7 @@ To prevent unnecessary actions when the target system is overwhelmed:
 - **Rate Limits**: 1 click/sec, 20 clicks/min.
 - **Emergency Stop**: **Ctrl + Alt + Esc** kills the process immediately.
 - **Log Audit**: Every action, detection, and alert is recorded in `logs/antigravity_review_helper.log`.
+- **Live Monitoring**: The **Live Event Log** and **Event Counters** provide real-time visibility without exposing unredacted sensitive data.
 
 ## Window Targeting Safety
 - The helper never auto-selects or monitors windows globally.

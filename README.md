@@ -1,7 +1,7 @@
 # Antigravity Review Helper v4
 
-> **Current Status: `v0.2.1-stale-hwnd-fix`**  
-> Run with AutoHotkey v2 · Verified TEST EXE build · `DRY_RUN_MODE` enabled by default · Real Antigravity tests are manual only
+> **Current Status: `v0.2.2-overlay`**  
+> Run with AutoHotkey v2 · Verified TEST EXE build · `DRY_RUN_MODE` enabled by default · UI Overlay with Counters & Live Log
 
 A standalone Windows 10 desktop utility to assist with repetitive UI review actions in Antigravity, VS Code, and Cursor.
 
@@ -14,6 +14,7 @@ A standalone Windows 10 desktop utility to assist with repetitive UI review acti
 - **Safety Guards**: Dry-run mode by default, rate limiting, and emergency stop (Ctrl+Alt+Esc).
 - **Monitoring Toggle**: `Ctrl+Alt+S` starts/pauses the helper without disabling safety.
 - **Live Mode Guard**: Disabling Dry Run in GUI requires an explicit safety confirmation.
+- **UI Overlay**: Expanded window width (1000px) with dedicated panels for **Event Counters** and **Live Event Log**.
 
 ## Asset Normalization
 The helper uses standardized assets with fallbacks:
@@ -21,7 +22,7 @@ The helper uses standardized assets with fallbacks:
 - **Enable Overages / Limits**: `enable_overages_button.png` (Preferred) or `limit_warning.png` (Fallback).
 
 ## Manual Testing Status
-- **Version**: `v0.2.1-stale-hwnd-fix`
+- **Version**: `v0.2.2-overlay`
 - **Release Strategy**: Source and optional TEST EXE package.
 - **Manual Delegation**: Real Antigravity automation tests are performed manually by the user to ensure safety.
 - **Dry Run**: `DRY_RUN_MODE` is ON by default and must be verified before live testing.

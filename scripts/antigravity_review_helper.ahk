@@ -20,6 +20,11 @@ global FORBIDDEN_TITLES := ["terminal", "powershell", "cmd", "password", "creden
 ; Tracking missing assets to log only once
 global ContinueAssetMissingLogged := false
 
+; Event Counters State
+global EventCounters := Map()
+global CounterControls := Map() ; Map counter name -> Text control object
+global EventLogLV := 0 ; Global reference for Live Log ListView
+
 ; Limit Detection Phrases
 global LIMIT_PHRASES := [
     "limit", "limits", "usage limit", "limit reached", "reached your limit",
@@ -87,17 +92,51 @@ if (SAFETY_CONFIRMATION_REQUIRED)
     }
 }
 
-MyGui := Gui("+Resize", "Antigravity Review Helper v0.2.1-stale-hwnd-fix")
+MyGui := Gui("+Resize", "Antigravity Review Helper v0.2.2-overlay")
 MyGui.SetFont("s9", "Segoe UI")
 
-; Window List
+; Initialize Counters
+InitCounters()
+
+; Window List (Left Side)
 MyGui.Add("Text", "x10 y10", "Detected Antigravity Project Windows:")
 ; HWND | Status | Project | Title
-global MainLV := MyGui.Add("ListView", "x10 y30 w600 h120", ["HWND", "Status", "Project", "Title"])
+global MainLV := MyGui.Add("ListView", "x10 y30 w550 h120", ["HWND", "Status", "Project", "Title"])
 MainLV.OnEvent("Click", OnLVClick)
 
+; Event Counters (Right Side)
+MyGui.Add("GroupBox", "x570 y10 w410 h250", "Event Counters (Runtime Only)")
+yPos := 30
+AddCounterUI(MyGui, "TotalEvents", "Total Events:", 580, yPos)
+yPos += 20
+AddCounterUI(MyGui, "RetryDetected", "Retry Detected:", 580, yPos)
+AddCounterUI(MyGui, "RetryClicked", "Retry Clicked:", 800, yPos)
+yPos += 20
+AddCounterUI(MyGui, "CopyDebugDetected", "Copy Debug Detected:", 580, yPos)
+AddCounterUI(MyGui, "CopyDebugClicked", "Copy Debug Clicked:", 800, yPos)
+yPos += 20
+AddCounterUI(MyGui, "AcceptDetected", "Accept Detected:", 580, yPos)
+AddCounterUI(MyGui, "AcceptClicked", "Accept Clicked:", 800, yPos)
+yPos += 20
+AddCounterUI(MyGui, "ContinueDetected", "Continue Detected:", 580, yPos)
+AddCounterUI(MyGui, "ContinueClicked", "Continue Clicked:", 800, yPos)
+yPos += 20
+AddCounterUI(MyGui, "LimitsDetected", "LIMITS Detected:", 580, yPos)
+AddCounterUI(MyGui, "LimitsPopupOpened", "LIMITS Popups:", 800, yPos)
+yPos += 30
+AddCounterUI(MyGui, "StartBlocked", "Start Blocked:", 580, yPos)
+AddCounterUI(MyGui, "TargetWindowGone", "Target Gone:", 800, yPos)
+yPos += 20
+AddCounterUI(MyGui, "StaleWindowSkipped", "Stale Skipped:", 580, yPos)
+AddCounterUI(MyGui, "CooldownSkipped", "Cooldown Skips:", 800, yPos)
+yPos += 20
+AddCounterUI(MyGui, "DryRunBlocked", "Dry Run Blocked:", 580, yPos)
+
+btnResetCounters := MyGui.Add("Button", "x580 y225 w120", "Reset Counters")
+btnResetCounters.OnEvent("Click", (*) => ResetCounters())
+
 ; Configuration Pane
-MyGui.Add("GroupBox", "x10 y160 w600 h100", "Selected Window Configuration")
+MyGui.Add("GroupBox", "x10 y160 w550 h100", "Selected Window Configuration")
 chkEnabled := MyGui.Add("Checkbox", "x20 y180", "Enabled")
 chkAlwaysOn := MyGui.Add("Checkbox", "x100 y180", "Always On")
 chkRetry := MyGui.Add("Checkbox", "x200 y180", "Retry Auto")
@@ -109,11 +148,11 @@ chkAcceptAuto.OnEvent("Click", OnAcceptAutoClick)
 chkCopyDebugAuto := MyGui.Add("Checkbox", "x200 y205", "Copy Debug Info Auto")
 chkLimitsMonitor := MyGui.Add("Checkbox", "x420 y205 Checked", "Limits Alert Monitor")
 
-; Debug Viewer Panel
-MyGui.Add("GroupBox", "x10 y270 w600 h200", "Debug Viewer (Sanitized)")
-editDebugText := MyGui.Add("Edit", "x20 y290 w580 h120 ReadOnly vDebugText", "")
-txtCaptureStatus := MyGui.Add("Text", "x20 y420 w250", "Last Detection: None")
-txtRedactionStatus := MyGui.Add("Text", "x300 y420 w300", "Redaction Status: Idle")
+; Debug Viewer Panel (Left)
+MyGui.Add("GroupBox", "x10 y270 w550 h200", "Debug Viewer (Sanitized)")
+editDebugText := MyGui.Add("Edit", "x20 y290 w530 h120 ReadOnly vDebugText", "")
+txtCaptureStatus := MyGui.Add("Text", "x20 y420 w200", "Last Detection: None")
+txtRedactionStatus := MyGui.Add("Text", "x250 y420 w280", "Redaction Status: Idle")
 btnRefreshDebug := MyGui.Add("Button", "x20 y440 w100", "Refresh Debug")
 btnRefreshDebug.OnEvent("Click", (*) => OnManualDebugCapture())
 btnCopyDebug := MyGui.Add("Button", "x130 y440 w100", "Copy Sanitized")
@@ -122,6 +161,17 @@ btnClearDebug := MyGui.Add("Button", "x240 y440 w90", "Clear Debug")
 btnClearDebug.OnEvent("Click", OnClearDebug)
 btnSaveSnapshot := MyGui.Add("Button", "x340 y440 w150", "Save Sanitized Snapshot")
 btnSaveSnapshot.OnEvent("Click", OnSaveSnapshot)
+
+; Live Event Log (Right)
+MyGui.Add("GroupBox", "x570 y270 w410 h270", "Live Event Log")
+global EventLogLV := MyGui.Add("ListView", "x580 y290 w390 h210", ["Time", "Project", "Event", "Mode", "Note"])
+EventLogLV.ModifyCol(1, 60)
+EventLogLV.ModifyCol(2, 80)
+EventLogLV.ModifyCol(3, 140)
+EventLogLV.ModifyCol(4, 40)
+EventLogLV.ModifyCol(5, 70)
+btnClearEventLog := MyGui.Add("Button", "x580 y510 w120", "Clear Event Log")
+btnClearEventLog.OnEvent("Click", (*) => EventLogLV.Delete())
 
 ; Global Controls
 MyGui.Add("Button", "x10 y480 w100", "Refresh List").OnEvent("Click", RefreshWindowList)
@@ -137,7 +187,7 @@ chkDryRunGlobal.OnEvent("Click", OnDryRunToggle)
 global txtGlobalStatus := MyGui.Add("Text", "x10 y525 w600 cBlue", "Helper: RUNNING | Dry Run: ON")
 MyGui.Add("Text", "x450 y525 w160 cGray Right", "Emergency: Ctrl+Alt+Esc")
 
-MyGui.Show("w620 h550")
+MyGui.Show("w1000 h550")
 RefreshWindowList()
 ; SetTimer(RefreshWindowList, 5000) ; DISABLED to prevent selection loss and stale HWND access
 
@@ -157,6 +207,83 @@ ExtractProjectName(title)
         return (name != "") ? name : "Unknown Project"
     }
     return "Unknown Project"
+}
+
+; --- Counter Functions ---
+
+InitCounters() {
+    global EventCounters, CounterControls
+    counters := [
+        "TotalEvents", "RetryDetected", "RetryClicked", "CopyDebugDetected", "CopyDebugClicked",
+        "AcceptDetected", "AcceptClicked", "ContinueDetected", "ContinueClicked",
+        "LimitsDetected", "LimitsPopupOpened", "StartBlocked", "TargetWindowGone",
+        "StaleWindowSkipped", "CooldownSkipped", "DryRunBlocked"
+    ]
+    for c in counters
+        EventCounters[c] := 0
+}
+
+AddCounterUI(guiObj, name, label, x, y) {
+    global CounterControls
+    guiObj.Add("Text", "x" x " y" y " w120", label)
+    CounterControls[name] := guiObj.Add("Text", "x" (x+120) " y" y " w50 Right", "0")
+}
+
+IncrementCounter(eventName) {
+    global EventCounters, CounterControls
+    
+    ; Map event to counter
+    counter := ""
+    if (InStr(eventName, "RETRY_DETECTED")) {
+        counter := "RetryDetected"
+    } else if (InStr(eventName, "CLICKED_RETRY")) {
+        counter := "RetryClicked"
+    } else if (InStr(eventName, "COPY_DEBUG_INFO_DETECTED")) {
+        counter := "CopyDebugDetected"
+    } else if (InStr(eventName, "COPY_DEBUG_INFO_CLICKED") or InStr(eventName, "CLICKED_COPY_DEBUG")) {
+        counter := "CopyDebugClicked"
+    } else if (InStr(eventName, "ACCEPT_ALL_DETECTED") or InStr(eventName, "ACCEPT_MANUAL_DETECTED")) {
+        counter := "AcceptDetected"
+    } else if (InStr(eventName, "CLICKED_ACCEPT_MANUAL") or InStr(eventName, "CLICKED_ACCEPT_ALL_AUTO")) {
+        counter := "AcceptClicked"
+    } else if (InStr(eventName, "CONTINUE_DETECTED")) {
+        counter := "ContinueDetected"
+    } else if (InStr(eventName, "CLICKED_CONTINUE")) {
+        counter := "ContinueClicked"
+    } else if (InStr(eventName, "LIMIT_WARNING_DETECTED") or InStr(eventName, "ENABLE_OVERAGES_DETECTED")) {
+        counter := "LimitsDetected"
+    } else if (InStr(eventName, "LIMIT_POPUP_OPENED")) {
+        counter := "LimitsPopupOpened"
+    } else if (InStr(eventName, "START_BLOCKED")) {
+        counter := "StartBlocked"
+    } else if (InStr(eventName, "TARGET_WINDOW_GONE")) {
+        counter := "TargetWindowGone"
+    } else if (InStr(eventName, "SKIPPED_STALE_WINDOW") or InStr(eventName, "STALE_WINDOW")) {
+        counter := "StaleWindowSkipped"
+    } else if (InStr(eventName, "COOLDOWN_SKIP")) {
+        counter := "CooldownSkipped"
+    } else if (InStr(eventName, "DRY_RUN_MODE_BLOCKED") or InStr(eventName, "DR_LIVE_DANGER")) {
+        counter := "DryRunBlocked"
+    }
+    
+    EventCounters["TotalEvents"] += 1
+    if (CounterControls.Has("TotalEvents"))
+        CounterControls["TotalEvents"].Value := EventCounters["TotalEvents"]
+
+    if (counter != "" and EventCounters.Has(counter)) {
+        EventCounters[counter] += 1
+        if (CounterControls.Has(counter))
+            CounterControls[counter].Value := EventCounters[counter]
+    }
+}
+
+ResetCounters() {
+    global EventCounters, CounterControls
+    for name, val in EventCounters
+        EventCounters[name] := 0
+    for name, ctrl in CounterControls
+        ctrl.Value := "0"
+    LogAction(0, "COUNTERS_RESET", 0, 0, "All counters set to 0")
 }
 
 SafeWinExists(hwnd) {
@@ -739,22 +866,39 @@ DoClick(hwnd, clickX, clickY, type) {
 }
 
 LogAction(hwnd, event, x := 0, y := 0, actionNote := "") {
-    global LOG_FILE, DRY_RUN_MODE
+    global LOG_FILE, DRY_RUN_MODE, EventLogLV
     static logErrorShown := false
 
     timestamp := FormatTime(, "yyyy-MM-dd HH:mm:ss")
+    timeShort := FormatTime(, "HH:mm:ss")
 
     if (hwnd = 0) {
         title := "SYSTEM"
+        project := "SYSTEM"
     } else if (!SafeWinExists(hwnd)) {
         title := "STALE_WINDOW"
+        project := "STALE"
     } else {
         title := SafeWinGetTitle(hwnd, "STALE_WINDOW")
+        project := ExtractProjectName(title)
     }
 
     mode := DRY_RUN_MODE ? "DRY" : "LIVE"
     logLine := timestamp " | " hwnd " | " title " | " event " | " mode " | " x "," y " | " actionNote "`n"
 
+    ; 1. Increment Counters
+    IncrementCounter(event)
+
+    ; 2. Update Live Log Panel
+    if (EventLogLV != 0) {
+        try {
+            EventLogLV.Insert(1, , timeShort, project, event, mode, actionNote)
+            if (EventLogLV.GetCount() > 500)
+                EventLogLV.Delete(501)
+        }
+    }
+
+    ; 3. Write to File Log
     try {
         FileAppend(logLine, LOG_FILE)
     } catch as e {

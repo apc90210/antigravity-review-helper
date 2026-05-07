@@ -31,8 +31,23 @@ If the helper detects an "Enable Overages" button or a usage limit warning:
 - **Ctrl+Alt+D**: Manual Debug Capture (triggers "Copy debug info" scan).
 - **Ctrl+Alt+Esc**: Emergency Exit (instantly closes the application).
 
+## UI Overlay (v0.2.2+)
+The helper features an expanded layout (1000px width) for better visibility of real-time events.
+
+### Event Counters
+The right-side panel displays runtime counters for all major events:
+- **Detection Counters**: Track when buttons like "Retry" or "Accept All" are seen.
+- **Action Counters**: Track real clicks (only in LIVE mode).
+- **Safety Counters**: Track blocks due to self-window exclusion, stale handles, or Dry Run.
+- **Reset Counters**: Click to set all visible counters back to 0. Counters also reset automatically every time the program is launched.
+
+### Live Event Log
+A visible scrolling log that shows the most recent 500 events:
+- **Fields**: Time, Project, Event Name, Mode (DRY/LIVE), and Action Note.
+- **Clear Event Log**: Click to clear the visible list. This does not affect the permanent `logs\antigravity_review_helper.log` file.
+
 ## Dry Run Safety
-- **Global Dry Run Mode (Safety)**: When checked (default), the helper will log detections but **never** click real buttons.
+- **Global Dry Run Mode (Safety)**: When checked (default), the helper will log detections and increment counters but **never** click real buttons.
 - To enable live clicks, uncheck the box and accept the **DANGER** confirmation.
 - The status bar will turn **RED** and show **LIVE CLICKS ENABLED** when Dry Run is OFF.
 
