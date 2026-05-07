@@ -50,3 +50,4 @@ Or right-click `scripts\antigravity_review_helper.ahk` → **Run script** (if `.
 - [Safety Rules](docs/safety_rules.md)
 - [Window Targeting](docs/window_targeting.md)
 - [Dry-Run Testing](docs/dry_run_testing.md)
+

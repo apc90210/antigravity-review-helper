@@ -30,3 +30,4 @@ If the helper detects an "Enable Overages" button or a usage limit warning:
 - **Ctrl+Alt+A**: Manual Accept/Accept All (when a button was detected but auto-mode is OFF).
 - **Ctrl+Alt+D**: Manual Debug Capture (triggers "Copy debug info" scan).
 - **Ctrl+Alt+Esc**: Emergency Exit (instantly closes the application).
+

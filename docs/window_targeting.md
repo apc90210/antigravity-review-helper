@@ -48,3 +48,7 @@ If a limit warning is detected in a window, all automatic actions (Retry, Copy D
 - The target window must be **visible** and **not minimized**.
 - The click coordinates must be **inside the bounding box** of the specific window.
 - The window title must not contain forbidden terms (e.g., "password").
+
+## Project Name Extraction
+Project names are extracted using the ' - Antigravity' delimiter. Example: 'my-project - Antigravity - Agent' -> 'my-project'.
+

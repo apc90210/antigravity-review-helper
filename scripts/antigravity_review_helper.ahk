@@ -34,11 +34,12 @@ global REDACT_PATTERNS := [
     "i)(Authorization:\s+Bearer\s+)([^\s\r\n]+)"
 ]
 
-; Project Structure & Paths (Using absolute relative paths)
-global ASSET_DIR := A_ScriptDir "\..\assets\buttons\"
-global ALERT_DIR := A_ScriptDir "\..\assets\alerts\"
-global LOG_DIR := A_ScriptDir "\..\logs"
-global SNAPSHOT_DIR := A_ScriptDir "\..\debug_snapshots"
+; Project Structure & Paths (Robust Resolution)
+global PROJECT_ROOT := RegExReplace(A_ScriptDir, "\\[^\\]+$")
+global ASSET_DIR := PROJECT_ROOT "\assets\buttons\"
+global ALERT_DIR := PROJECT_ROOT "\assets\alerts\"
+global LOG_DIR := PROJECT_ROOT "\logs"
+global SNAPSHOT_DIR := PROJECT_ROOT "\debug_snapshots"
 
 ; Ensure Directories Exist
 if (!DirExist(LOG_DIR))
@@ -58,18 +59,10 @@ try {
 global RETRY_IMG := ASSET_DIR "retry_button.png"
 global CONTINUE_IMG := ASSET_DIR "continue_button.png"
 global COPY_DEBUG_IMG := ASSET_DIR "copy_debug_info_button.png"
-
-; Accept All Assets (Preferred -> Fallback)
 global ACCEPT_ALL_IMG := ASSET_DIR "accept_all_button.png"
 global ACCEPT_FALLBACK_IMG := ASSET_DIR "accept_button.png"
-
-; Enable Overages / Limit Assets (Preferred -> Fallback)
 global ENABLE_OVERAGES_IMG := ASSET_DIR "enable_overages_button.png"
 global LIMITS_FALLBACK_IMG := ALERT_DIR "limit_warning.png"
-
-; Mouse tracking
-global LastMouseX := 0, LastMouseY := 0
-MouseGetPos(&LastMouseX, &LastMouseY)
 
 ; Alert Window State
 global AlertGuis := Map() ; hwnd -> Gui Object
@@ -80,10 +73,11 @@ global AlertGuis := Map() ; hwnd -> Gui Object
 
 if (SAFETY_CONFIRMATION_REQUIRED)
 {
-    msg := "Antigravity Review Helper v4 (Limits Alert) Safety Briefing:`n`n"
+    msg := "Antigravity Review Helper v4 (Harden Selection) Safety Briefing:`n`n"
     msg .= "- UI is English-only.`n"
+    msg .= "- Helper never monitors its own windows.`n"
+    msg .= "- User must explicitly select and START a project window.`n"
     msg .= "- Debug text is SANITIZED (redacted) before display/save.`n"
-    msg .= "- Retry detection can trigger 'Copy debug info' click.`n"
     msg .= "- Limits Alert: Warning popup when usage limits detected.`n"
     msg .= "- No network access or external file reading.`n`n"
     msg .= "Proceed?"
@@ -97,8 +91,9 @@ MyGui := Gui("+Resize", "Antigravity Review Helper v4")
 MyGui.SetFont("s9", "Segoe UI")
 
 ; Window List
-MyGui.Add("Text", "x10 y10", "Detected Windows:")
-global MainLV := MyGui.Add("ListView", "x10 y30 w600 h120", ["HWND", "Status", "Title"])
+MyGui.Add("Text", "x10 y10", "Detected Antigravity Project Windows:")
+; HWND | Status | Project | Title
+global MainLV := MyGui.Add("ListView", "x10 y30 w600 h120", ["HWND", "Status", "Project", "Title"])
 MainLV.OnEvent("Click", OnLVClick)
 
 ; Configuration Pane
@@ -144,10 +139,25 @@ MyGui.Add("Text", "x450 y525 w160 cGray Right", "Emergency: Ctrl+Alt+Esc")
 
 MyGui.Show("w620 h550")
 RefreshWindowList()
+SetTimer(RefreshWindowList, 5000)
 
 ; ==============================================================================
 ; GUI EVENTS & HELPERS
 ; ==============================================================================
+
+ExtractProjectName(title)
+{
+    if (InStr(title, "Antigravity Review Helper") or InStr(title, "Antigravity Review Helper v4") or InStr(title, "Antigravity Review Helper - Warning"))
+        return "SELF - DO NOT USE"
+    
+    if (InStr(title, " - Antigravity"))
+    {
+        parts := StrSplit(title, " - Antigravity")
+        name := Trim(parts[1])
+        return (name != "") ? name : "Unknown Project"
+    }
+    return "Unknown Project"
+}
 
 OnClearLog(*) {
     try {
@@ -220,12 +230,56 @@ UpdateStatus(newStatus)
 {
     RowNumber := MainLV.GetNext()
     if (RowNumber = 0)
+    {
+        LogAction(0, "START_BLOCKED_NO_SELECTION", 0, 0, "")
+        MsgBox("No window selected.")
         return
+    }
     hwnd := MainLV.GetText(RowNumber, 1)
+    title := MainLV.GetText(RowNumber, 4)
+    project := ExtractProjectName(title)
+    
+    if (project = "SELF - DO NOT USE")
+    {
+        LogAction(hwnd, "START_BLOCKED_SELF_WINDOW", 0, 0, "")
+        MsgBox("Cannot monitor the helper itself.")
+        return
+    }
+    if (project = "Unknown Project")
+    {
+        LogAction(hwnd, "START_BLOCKED_UNKNOWN_PROJECT", 0, 0, "")
+        MsgBox("Unknown project structure. Selection blocked.")
+        return
+    }
+    if (!WinExist("ahk_id " hwnd))
+    {
+        LogAction(hwnd, "START_BLOCKED_WINDOW_NOT_FOUND", 0, 0, "")
+        MsgBox("Target window no longer exists.")
+        RefreshWindowList()
+        return
+    }
+    if (WinGetMinMax("ahk_id " hwnd) = -1)
+    {
+        LogAction(hwnd, "START_BLOCKED_MINIMIZED", 0, 0, "")
+        MsgBox("Target window is minimized.")
+        return
+    }
+    
+    for pattern in FORBIDDEN_TITLES
+    {
+        if (InStr(title, pattern))
+        {
+            LogAction(hwnd, "START_BLOCKED_FORBIDDEN_TITLE", 0, 0, pattern)
+            MsgBox("Window title contains forbidden word: " pattern)
+            return
+        }
+    }
+
     if (WindowConfigs.Has(hwnd))
     {
         WindowConfigs[hwnd].Status := newStatus
         MainLV.Modify(RowNumber, , , newStatus)
+        LogAction(hwnd, "STATUS_CHANGED", 0, 0, newStatus)
     }
 }
 
@@ -239,6 +293,7 @@ StopAll(*)
     }
     Loop MainLV.GetCount()
         MainLV.Modify(A_Index, , , "Stopped")
+    LogAction(0, "STOP_ALL_COMMAND", 0, 0, "")
 }
 
 RefreshWindowList(*)
@@ -249,6 +304,12 @@ RefreshWindowList(*)
     for hwnd in WinGetList()
     {
         title := WinGetTitle(hwnd)
+        project := ExtractProjectName(title)
+        
+        ; Explicitly exclude self
+        if (project = "SELF - DO NOT USE")
+            continue
+            
         isMatch := false
         for pattern in ALLOWED_TITLES
         {
@@ -258,15 +319,18 @@ RefreshWindowList(*)
                 break
             }
         }
+        
         if (isMatch)
         {
             config := {Enabled: 0, AlwaysOn: 0, RetryAuto: 0, ContinueAuto: 0, AcceptManual: 1, AcceptAuto: 0, CopyDebugAuto: 0, LimitsMonitor: 1, Status: "Stopped", LastAcceptX: 0, LastAcceptY: 0, LastRetryTime: "", LastCaptureStatus: "Idle", CapturedText: "", AlertActive: false, LastLimitLog: 0}
             if (oldConfigs.Has("" hwnd))
                 config := oldConfigs["" hwnd]
+            
             WindowConfigs["" hwnd] := config
-            MainLV.Add(, hwnd, config.Status, title)
+            MainLV.Add(, hwnd, config.Status, project, title)
         }
     }
+    LogAction(0, "REFRESH_WINDOW_LIST", 0, 0, "Count: " MainLV.GetCount())
 }
 
 OnDryRunToggle(ctrl, *)
@@ -317,6 +381,8 @@ OnManualDebugCapture()
 
 CaptureDebugForWindow(hwnd, triggerType)
 {
+    if (!WinExist("ahk_id " hwnd))
+        return
     WinGetPos(&x, &y, &w, &h, "ahk_id " hwnd)
     if (ScanForButton(COPY_DEBUG_IMG, x, y, x+w, y+h, &foundX, &foundY))
     {
@@ -347,6 +413,8 @@ CaptureDebugViaCopyButton(hwnd, foundX, foundY, triggerType)
 
 UpdateDebugViewer(hwnd, text, method)
 {
+    if (!WindowConfigs.Has("" hwnd))
+        return
     config := WindowConfigs["" hwnd]
     if (method != "NONE")
     {
@@ -423,6 +491,8 @@ OnSaveSnapshot(*)
 
 ScanForLimits(hwnd)
 {
+    if (!WindowConfigs.Has("" hwnd))
+        return false
     config := WindowConfigs["" hwnd]
     if (!config.LimitsMonitor)
         return false
@@ -448,8 +518,7 @@ ScanForLimits(hwnd)
     if (method != "NONE") {
         if (!config.AlertActive) {
             config.AlertActive := true
-            LogAction(hwnd, "ENABLE_OVERAGES_DETECTED", 0, 0, method)
-            LogAction(hwnd, "LIMIT_WARNING_DETECTED_IMAGE", 0, 0, matchInfo)
+            LogAction(hwnd, "LIMIT_WARNING_DETECTED", 0, 0, method " | " matchInfo)
             OpenAlertWindow(hwnd, method, matchInfo)
         }
         return true
@@ -516,14 +585,23 @@ MainLoop()
     for hwndStr, config in WindowConfigs
     {
         hwnd := Number(hwndStr)
+        ; Hardened check: only Running or AlwaysOn
         if (!config.Enabled or (config.Status != "Running" and !config.AlwaysOn))
             continue
         if (!WinExist("ahk_id " hwnd) or WinGetMinMax("ahk_id " hwnd) = -1)
             continue
+        
         if (config.AlertActive)
             continue
+        
+        ; Double check project name
+        title := WinGetTitle(hwnd)
+        if (ExtractProjectName(title) = "SELF - DO NOT USE")
+            continue
+
         if (ScanForLimits(hwnd))
             continue
+            
         WinGetPos(&x, &y, &w, &h, hwnd)
         
         global ContinueAssetMissingLogged
@@ -548,7 +626,6 @@ MainLoop()
         }
 
         if (ScanForButton(RETRY_IMG, x, y, x+w, y+h, &fX, &fY)) {
-            LogAction(hwnd, "RETRY_DETECTED", fX, fY, "")
             if (DRY_RUN_MODE)
                 LogAction(hwnd, "DRY_RUN_RETRY_DETECTED", fX, fY, "Dry Run")
             if (DRY_RUN_MODE) {
@@ -591,7 +668,7 @@ LogAction(hwnd, event, x, y, actionNote) {
     global LOG_FILE
     static logErrorShown := false
     timestamp := FormatTime(, "yyyy-MM-dd HH:mm:ss")
-    title := WinGetTitle(hwnd)
+    title := (hwnd != 0) ? WinGetTitle(hwnd) : "SYSTEM"
     logLine := timestamp " | " hwnd " | " title " | " event " | " (DRY_RUN_MODE ? "DRY" : "LIVE") " | " x "," y " | " actionNote "`n"
     try {
         FileAppend(logLine, LOG_FILE)
