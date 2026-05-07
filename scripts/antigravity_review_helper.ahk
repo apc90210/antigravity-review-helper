@@ -1,4 +1,4 @@
-﻿#Requires AutoHotkey v2.0
+#Requires AutoHotkey v2.0
 #SingleInstance Force
 
 ; ==============================================================================
@@ -188,14 +188,19 @@ OnLVClick(targetLV, RowNumber)
 OnAcceptAutoClick(ctrl, *)
 {
     RowNumber := MainLV.GetNext()
-    if (RowNumber = 0) { ctrl.Value := 0; return; }
+    if (RowNumber = 0)
+    {
+        ctrl.Value := 0
+        return
+    }
     hwnd := MainLV.GetText(RowNumber, 1)
     config := WindowConfigs[hwnd]
     if (ctrl.Value = 1)
     {
         if (MsgBox("Accept All Auto can approve multiple changes automatically. Continue?", "DANGER", "YesNo Icon!") = "No")
         {
-            ctrl.Value := 0; config.AcceptAuto := 0
+            ctrl.Value := 0
+            config.AcceptAuto := 0
             LogAction(hwnd, "ACCEPT_ALL_CONFIRMATION_CANCELLED", 0, 0, "")
         }
         else
@@ -247,7 +252,11 @@ RefreshWindowList(*)
         isMatch := false
         for pattern in ALLOWED_TITLES
         {
-            if (InStr(title, pattern)) { isMatch := true; break; }
+            if (InStr(title, pattern))
+            {
+                isMatch := true
+                break
+            }
         }
         if (isMatch)
         {
@@ -266,7 +275,8 @@ OnDryRunToggle(ctrl, *)
     {
         if (MsgBox("Turning Dry Run OFF allows real clicks. Continue?", "DANGER", "YesNo Icon!") = "No")
         {
-            ctrl.Value := 1; global DRY_RUN_MODE := true
+            ctrl.Value := 1
+            global DRY_RUN_MODE := true
         }
         else
         {
@@ -324,8 +334,10 @@ CaptureDebugViaCopyButton(hwnd, foundX, foundY, triggerType)
         UpdateDebugViewer(hwnd, "COPY_DEBUG_INFO_BUTTON detected but not clicked (DRY RUN).", "DRY_RUN")
         return
     }
-    oldClip := A_Clipboard; A_Clipboard := ""
-    CoordMode "Mouse", "Screen"; Click(foundX, foundY)
+    oldClip := A_Clipboard
+    A_Clipboard := ""
+    CoordMode "Mouse", "Screen"
+    Click(foundX, foundY)
     if (ClipWait(3))
         UpdateDebugViewer(hwnd, A_Clipboard, "COPY_BUTTON")
     else
@@ -368,7 +380,12 @@ SanitizeDebug(text)
 
 OnCopySanitized(*)
 {
-    if (editDebugText.Value != "") { A_Clipboard := editDebugText.Value; ToolTip("Copied."); SetTimer(() => ToolTip(), -2000); }
+    if (editDebugText.Value != "")
+    {
+        A_Clipboard := editDebugText.Value
+        ToolTip("Copied.")
+        SetTimer(() => ToolTip(), -2000)
+    }
 }
 
 OnClearDebug(*)
@@ -376,9 +393,12 @@ OnClearDebug(*)
     RowNumber := MainLV.GetNext()
     if (RowNumber = 0)
         return
-    hwnd := MainLV.GetText(RowNumber, 1); config := WindowConfigs[hwnd]
-    config.CapturedText := ""; config.LastCaptureStatus := "Cleared"
-    editDebugText.Value := ""; txtRedactionStatus.Value := "Redaction Status: Cleared"
+    hwnd := MainLV.GetText(RowNumber, 1)
+    config := WindowConfigs[hwnd]
+    config.CapturedText := ""
+    config.LastCaptureStatus := "Cleared"
+    editDebugText.Value := ""
+    txtRedactionStatus.Value := "Redaction Status: Cleared"
     LogAction(hwnd, "DEBUG_CLEARED", 0, 0, "")
 }
 
@@ -387,10 +407,12 @@ OnSaveSnapshot(*)
     RowNumber := MainLV.GetNext()
     if (RowNumber = 0 or editDebugText.Value = "")
         return
-    hwnd := MainLV.GetText(RowNumber, 1); timestamp := FormatTime(, "yyyyMMdd_HHmmss")
+    hwnd := MainLV.GetText(RowNumber, 1)
+    timestamp := FormatTime(, "yyyyMMdd_HHmmss")
     filename := SNAPSHOT_DIR "\" timestamp "_" hwnd "_retry_debug.txt"
     try {
-        if (!DirExist(SNAPSHOT_DIR)) { DirCreate(SNAPSHOT_DIR) }
+        if (!DirExist(SNAPSHOT_DIR))
+            DirCreate(SNAPSHOT_DIR)
         FileAppend(editDebugText.Value, filename)
         LogAction(hwnd, "DEBUG_SNAPSHOT_SAVED", 0, 0, filename)
         MsgBox("Saved: " filename)
@@ -408,7 +430,12 @@ ScanForLimits(hwnd)
     try {
         text := WinGetText("ahk_id " hwnd)
         for phrase in LIMIT_PHRASES
-            if (InStr(text, phrase)) { method := "UIA_TEXT"; matchInfo := phrase; break; }
+            if (InStr(text, phrase))
+            {
+                method := "UIA_TEXT"
+                matchInfo := phrase
+                break
+            }
     } catch {
     }
     if (method = "NONE") {
@@ -433,28 +460,41 @@ ScanForLimits(hwnd)
 OpenAlertWindow(targetHwnd, method, matchInfo)
 {
     if (AlertGuis.Has("" targetHwnd)) { 
-        try { AlertGuis["" targetHwnd].Show() }
-        catch { }
+        try {
+            AlertGuis["" targetHwnd].Show()
+        }
+        catch
+        {
+        }
         return
     }
     AlertGui := Gui("+AlwaysOnTop -MinimizeBox +Owner" MyGui.Hwnd, "Antigravity Review Helper - Warning")
-    AlertGui.BackColor := "Red"; AlertGui.SetFont("s48 w700", "Segoe UI")
+    AlertGui.BackColor := "Red"
+    AlertGui.SetFont("s48 w700", "Segoe UI")
     AlertGui.Add("Text", "Center w400 cWhite", "LIMITS")
     AlertGui.SetFont("s10 w400", "Segoe UI")
     btnOk := AlertGui.Add("Button", "w100 h30 x150 y150", "OK")
     btnOk.OnEvent("Click", (*) => OnAlertOk(targetHwnd))
-    AlertGuis["" targetHwnd] := AlertGui; AlertGui.Show("w400 h200")
+    AlertGuis["" targetHwnd] := AlertGui
+    AlertGui.Show("w400 h200")
     LogAction(targetHwnd, "LIMIT_POPUP_OPENED", 0, 0, method)
 }
 
-OnAlertOk(hwnd) { ClearAlert(hwnd); LogAction(hwnd, "LIMIT_POPUP_CLOSED", 0, 0, ""); }
+OnAlertOk(hwnd) {
+    ClearAlert(hwnd)
+    LogAction(hwnd, "LIMIT_POPUP_CLOSED", 0, 0, "")
+}
 
 ClearAlert(hwnd) {
     if (WindowConfigs.Has("" hwnd)) {
         WindowConfigs["" hwnd].AlertActive := false
         if (AlertGuis.Has("" hwnd)) { 
-            try { AlertGuis["" hwnd].Destroy() } 
-            catch { }
+            try {
+                AlertGuis["" hwnd].Destroy()
+            } 
+            catch
+            {
+            }
             AlertGuis.Delete("" hwnd) 
         }
     }
@@ -462,7 +502,10 @@ ClearAlert(hwnd) {
 
 ^!esc:: ExitApp()
 ^!d:: OnManualDebugCapture()
-^!s:: { global IS_PAUSED := !IS_PAUSED; UpdateGlobalStatus(); }
+^!s:: { 
+    global IS_PAUSED := !IS_PAUSED
+    UpdateGlobalStatus()
+}
 
 SetTimer(MainLoop, 1000)
 
@@ -524,16 +567,24 @@ ScanForButton(imgPath, x1, y1, x2, y2, &fX, &fY) {
     if (!FileExist(imgPath))
         return false
     CoordMode "Pixel", "Screen"
-    if ImageSearch(&fX, &fY, x1, y1, x2, y2, "*50 " imgPath) { fX += 10, fY += 10; return true; }
+    if ImageSearch(&fX, &fY, x1, y1, x2, y2, "*50 " imgPath)
+    {
+        fX += 10
+        fY += 10
+        return true
+    }
     return false
 }
 
 DoClick(hwnd, clickX, clickY, type) {
     if (DRY_RUN_MODE) {
-        upperType := StrUpper(type); LogAction(hwnd, "DRY_RUN_" upperType "_DETECTED", clickX, clickY, "Dry Run")
+        upperType := StrUpper(type)
+        LogAction(hwnd, "DRY_RUN_" upperType "_DETECTED", clickX, clickY, "Dry Run")
         return
     }
-    CoordMode "Mouse", "Screen"; Click(clickX, clickY); LogAction(hwnd, "CLICKED_" StrUpper(type), clickX, clickY, "Live")
+    CoordMode "Mouse", "Screen"
+    Click(clickX, clickY)
+    LogAction(hwnd, "CLICKED_" StrUpper(type), clickX, clickY, "Live")
 }
 
 LogAction(hwnd, event, x, y, actionNote) {
