@@ -116,8 +116,14 @@ MyGui.Add("GroupBox", "x10 y270 w600 h200", "Debug Viewer (Sanitized)")
 editDebugText := MyGui.Add("Edit", "x20 y290 w580 h120 ReadOnly vDebugText", "")
 txtCaptureStatus := MyGui.Add("Text", "x20 y420 w250", "Last Detection: None")
 txtRedactionStatus := MyGui.Add("Text", "x300 y420 w300", "Redaction Status: Idle")
-btnRefreshDebug := MyGui.Add("Button", "x20 y440 w120", "Refresh Debug")
+btnRefreshDebug := MyGui.Add("Button", "x20 y440 w100", "Refresh Debug")
 btnRefreshDebug.OnEvent("Click", (*) => OnManualDebugCapture())
+btnCopyDebug := MyGui.Add("Button", "x130 y440 w100", "Copy Sanitized")
+btnCopyDebug.OnEvent("Click", OnCopySanitized)
+btnClearDebug := MyGui.Add("Button", "x240 y440 w90", "Clear Debug")
+btnClearDebug.OnEvent("Click", OnClearDebug)
+btnSaveSnapshot := MyGui.Add("Button", "x340 y440 w150", "Save Sanitized Snapshot")
+btnSaveSnapshot.OnEvent("Click", OnSaveSnapshot)
 
 ; Global Controls
 MyGui.Add("Button", "x10 y480 w100", "Refresh List").OnEvent("Click", RefreshWindowList)
@@ -390,6 +396,58 @@ SanitizeDebug(text)
     return text
 }
 
+OnCopySanitized(*)
+{
+    if (editDebugText.Value != "")
+    {
+        A_Clipboard := editDebugText.Value
+        ToolTip("Sanitized debug copied to clipboard.")
+        SetTimer(() => ToolTip(), -2000)
+    }
+}
+
+OnClearDebug(*)
+{
+    RowNumber := MainLV.GetNext()
+    if (RowNumber = 0)
+    {
+        return
+    }
+    hwnd := MainLV.GetText(RowNumber, 1)
+    config := WindowConfigs[hwnd]
+    config.CapturedText := ""
+    config.LastCaptureStatus := "Cleared"
+    editDebugText.Value := ""
+    txtRedactionStatus.Value := "Redaction Status: Cleared"
+    LogAction(hwnd, "DEBUG_CLEARED", 0, 0, "")
+}
+
+OnSaveSnapshot(*)
+{
+    RowNumber := MainLV.GetNext()
+    if (RowNumber = 0 or editDebugText.Value = "")
+    {
+        return
+    }
+    hwnd := MainLV.GetText(RowNumber, 1)
+    timestamp := FormatTime(, "yyyyMMdd_HHmmss")
+    filename := SNAPSHOT_DIR timestamp "_" hwnd "_retry_debug.txt"
+    try
+    {
+        if (!DirExist(SNAPSHOT_DIR))
+        {
+            DirCreate(SNAPSHOT_DIR)
+        }
+        FileAppend(editDebugText.Value, filename)
+        LogAction(hwnd, "DEBUG_SNAPSHOT_SAVED", 0, 0, filename)
+        MsgBox("Snapshot saved: " filename)
+    }
+    catch
+    {
+        MsgBox("Failed to save snapshot.")
+    }
+}
+
 ; ==============================================================================
 ; LIMITS ALERT LOGIC
 ; ==============================================================================
@@ -511,6 +569,13 @@ ClearAlert(hwnd)
 ^!esc:: ExitApp()
 
 ^!d:: OnManualDebugCapture()
+
+^!s::
+{
+    global DRY_RUN_MODE := !DRY_RUN_MODE
+    ToolTip("DRY_RUN_MODE: " (DRY_RUN_MODE ? "ON" : "OFF"))
+    SetTimer(() => ToolTip(), -2000)
+}
 
 ^!a::
 {
