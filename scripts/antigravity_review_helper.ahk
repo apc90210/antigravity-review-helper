@@ -87,7 +87,7 @@ if (SAFETY_CONFIRMATION_REQUIRED)
     }
 }
 
-MyGui := Gui("+Resize", "Antigravity Review Helper v4")
+MyGui := Gui("+Resize", "Antigravity Review Helper v0.2.1-stale-hwnd-fix")
 MyGui.SetFont("s9", "Segoe UI")
 
 ; Window List
@@ -139,7 +139,7 @@ MyGui.Add("Text", "x450 y525 w160 cGray Right", "Emergency: Ctrl+Alt+Esc")
 
 MyGui.Show("w620 h550")
 RefreshWindowList()
-SetTimer(RefreshWindowList, 5000)
+; SetTimer(RefreshWindowList, 5000) ; DISABLED to prevent selection loss and stale HWND access
 
 ; ==============================================================================
 ; GUI EVENTS & HELPERS
@@ -147,7 +147,7 @@ SetTimer(RefreshWindowList, 5000)
 
 ExtractProjectName(title)
 {
-    if (InStr(title, "Antigravity Review Helper") or InStr(title, "Antigravity Review Helper v4") or InStr(title, "Antigravity Review Helper - Warning"))
+    if (InStr(title, "Antigravity Review Helper") or InStr(title, "v0.2.1-stale-hwnd-fix") or InStr(title, "Antigravity Review Helper - Warning"))
         return "SELF - DO NOT USE"
     
     if (InStr(title, " - Antigravity"))
@@ -284,14 +284,14 @@ UpdateStatus(newStatus)
     if (RowNumber = 0)
     {
         LogAction(0, "START_BLOCKED_NO_SELECTION", 0, 0, "")
-        MsgBox("No window selected.")
+        MsgBox("No window selected.", "Selection Required", "Icon!")
         return
     }
     hwnd := MainLV.GetText(RowNumber, 1)
     if (!SafeWinExists(hwnd))
     {
-        LogAction(hwnd, "START_BLOCKED_WINDOW_NOT_FOUND", 0, 0, "")
-        MsgBox("Selected window no longer exists. Click Refresh List and select the window again.")
+        MsgBox("Selected window no longer exists. Click Refresh List and select the project again.", "Window Not Found", "Icon!")
+        LogAction(0, "START_BLOCKED_WINDOW_NOT_FOUND", 0, 0, "stale hwnd: " hwnd)
         RefreshWindowList()
         return
     }
@@ -737,23 +737,28 @@ DoClick(hwnd, clickX, clickY, type) {
     }
 }
 
-LogAction(hwnd, event, x, y, actionNote) {
-    global LOG_FILE
+LogAction(hwnd, event, x := 0, y := 0, actionNote := "") {
+    global LOG_FILE, DRY_RUN_MODE
     static logErrorShown := false
+
     timestamp := FormatTime(, "yyyy-MM-dd HH:mm:ss")
-    title := "SYSTEM"
-    if (hwnd != 0) {
-        if (SafeWinExists(hwnd))
-            title := SafeWinGetTitle(hwnd)
-        else
-            title := "STALE_WINDOW"
+
+    if (hwnd = 0) {
+        title := "SYSTEM"
+    } else if (!SafeWinExists(hwnd)) {
+        title := "STALE_WINDOW"
+    } else {
+        title := SafeWinGetTitle(hwnd, "STALE_WINDOW")
     }
-    logLine := timestamp " | " hwnd " | " title " | " event " | " (DRY_RUN_MODE ? "DRY" : "LIVE") " | " x "," y " | " actionNote "`n"
+
+    mode := DRY_RUN_MODE ? "DRY" : "LIVE"
+    logLine := timestamp " | " hwnd " | " title " | " event " | " mode " | " x "," y " | " actionNote "`n"
+
     try {
         FileAppend(logLine, LOG_FILE)
     } catch as e {
         if (!logErrorShown) {
-            MsgBox("Critical: Failed to write to log file.`n`nError: " e.Message)
+            MsgBox("Failed to write helper log. The helper will continue running.", "Log Warning", "Icon!")
             logErrorShown := true
         }
     }

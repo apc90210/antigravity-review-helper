@@ -58,10 +58,13 @@ This document outlines the steps for manually validating the Antigravity Review 
 **Cause**: The target Antigravity window was closed or reloaded, and the helper is trying to access an old window handle (HWND).
 
 **Fix**:
-1. Click **Stop Selected** or **Stop All** in the helper.
-2. Click **Refresh List** to detect the new window handles.
-3. Select the correct project/window from the list again.
-4. Click **Start Selected**.
+1. Ensure you are running version **v0.2.1-stale-hwnd-fix** or newer (check the window title).
+2. If this error appears in an older version, the helper may crash.
+3. In v0.2.1+, the helper will show a friendly message instead of crashing.
+4. Click **Stop Selected** or **Stop All** in the helper.
+5. Click **Refresh List** to detect the new window handles.
+6. Select the correct project/window from the list again.
+7. Click **Start Selected**.
 
 ### Helper Status shows "Stopped" automatically
 **Cause**: The helper detected that the monitored window is no longer available and automatically stopped monitoring to prevent a crash.
