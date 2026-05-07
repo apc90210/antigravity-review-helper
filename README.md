@@ -1,7 +1,7 @@
 # Antigravity Review Helper v4
 
-> **Current Status: `v0.1.0-source-only`**  
-> Run with AutoHotkey v2 · EXE build deferred · `DRY_RUN_MODE` enabled by default · `Accept All Auto` OFF by default
+> **Current Status: `v0.2.0-test-ready`**  
+> Run with AutoHotkey v2 · Optional TEST EXE build · `DRY_RUN_MODE` enabled by default · Real Antigravity tests are manual only
 
 A standalone Windows 10 desktop utility to assist with repetitive UI review actions in Antigravity, VS Code, and Cursor.
 
@@ -19,6 +19,12 @@ A standalone Windows 10 desktop utility to assist with repetitive UI review acti
 The helper uses standardized assets with fallbacks:
 - **Accept All**: `accept_all_button.png` (Preferred) or `accept_button.png` (Fallback).
 - **Enable Overages / Limits**: `enable_overages_button.png` (Preferred) or `limit_warning.png` (Fallback).
+
+## Manual Testing Status
+- **Version**: `v0.2.0-test-ready`
+- **Release Strategy**: Source and optional TEST EXE package.
+- **Manual Delegation**: Real Antigravity automation tests are performed manually by the user to ensure safety.
+- **Dry Run**: `DRY_RUN_MODE` is ON by default and must be verified before live testing.
 
 ## Current Distribution Mode
 

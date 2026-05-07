@@ -2,7 +2,40 @@
 
 ---
 
-## v0.1.0-source-only
+## v0.2.0-test-ready
+
+**Date:** 2026-05-07  
+**Distribution:** Source and optional TEST EXE package  
+**Platform:** Windows 10 / Windows 11  
+**Runtime:** AutoHotkey v2
+
+---
+
+### Overview
+
+Release **v0.2.0-test-ready** hardens window selection and prepares the helper for manual real-world validation. This version introduces project/workspace name targeting and self-window exclusion to ensure the helper only interacts with intended targets.
+
+### Changes
+
+- **Project/Workspace Targeting**: The window list now explicitly shows the project folder name extracted from the window title.
+- **Self-Window Exclusion**: The helper now identifies its own window and prevents monitoring it, avoiding infinite loops or self-clicking.
+- **Robust Selection**: `Start Selected` now requires an explicit row selection and validates the target window before starting.
+- **Manual Test Focus**: Real Antigravity automation tests are delegated to the user. All automated button clicks are disabled by default.
+- **Test EXE Package**: Optional compilation for manual testing environments where AHK is not pre-installed.
+- **Deterministic Fixtures**: Validated against static image fixtures to ensure consistent detection across different environments.
+
+### Safety Defaults
+
+```
+DRY_RUN_MODE          = true   (ON by default)
+ACCEPT_ALL_AUTO       = false  (OFF by default)
+COPY_DEBUG_INFO_AUTO  = false  (OFF by default)
+SELF_EXCLUSION        = active
+PROJECT_COLUMN        = visible
+```
+
+---
+
 
 **Date:** 2026-05-07  
 **Distribution:** Source code only — no compiled EXE  

@@ -1,4 +1,4 @@
-﻿# Logs
+# Logs
 logs/*.log
 logs/*.txt
 
@@ -14,6 +14,7 @@ debug_snapshots/*.log
 *.7z
 *.msi
 dist/
+dist_test/
 
 # Scratch and dev-only files
 scratch/
