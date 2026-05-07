@@ -2,8 +2,14 @@
 #SingleInstance Force
 
 ; ==============================================================================
-; CONFIGURATION
+; CONFIGURATION & SAFETY SETTINGS
 ; ==============================================================================
+
+; Set DRY_RUN_MODE := false only after manual validation.
+global DRY_RUN_MODE := true
+
+; If true, shows a safety briefing on startup.
+global SAFETY_CONFIRMATION_REQUIRED := true
 
 global HelperEnabled := false
 global AcceptPending := false
@@ -23,7 +29,6 @@ global FORBIDDEN_TITLES := ["terminal", "powershell", "cmd", "password", "creden
 
 ; Monitoring Regions (x1, y1, x2, y2)
 ; Edit these to match your dual monitor setup.
-; Example: Monitor 1 (0, 0, 1920, 1080), Monitor 2 (1920, 0, 3840, 1080)
 global SCAN_REGIONS := [
     {x1: 0, y1: 0, x2: 1920, y2: 1080},      ; Monitor 1
     {x1: 1920, y1: 0, x2: 3840, y2: 1080}    ; Monitor 2
@@ -42,6 +47,24 @@ global LastMouseY := 0
 MouseGetPos(&LastMouseX, &LastMouseY)
 
 ; ==============================================================================
+; INITIALIZATION
+; ==============================================================================
+
+if (SAFETY_CONFIRMATION_REQUIRED)
+{
+    msg := "Antigravity Review Helper Safety Briefing:`n`n"
+    msg .= "- Retry/Continue: Auto-click when enabled (and DRY_RUN is false).`n"
+    msg .= "- Accept: MANUAL ONLY via Ctrl+Alt+A.`n"
+    msg .= "- Ctrl+Alt+S: Toggle Helper.`n"
+    msg .= "- Ctrl+Alt+Esc: Emergency Exit.`n`n"
+    msg .= "DRY_RUN_MODE is currently " (DRY_RUN_MODE ? "ENABLED" : "DISABLED") ".`n`n"
+    msg .= "Proceed?"
+    
+    if (MsgBox(msg, "Safety Audit", "YesNo Iconi") = "No")
+        ExitApp()
+}
+
+; ==============================================================================
 ; HOTKEYS
 ; ==============================================================================
 
@@ -50,9 +73,10 @@ MouseGetPos(&LastMouseX, &LastMouseY)
 {
     global HelperEnabled := !HelperEnabled
     state := HelperEnabled ? "ENABLED" : "DISABLED"
-    Tooltip("Helper " state)
+    modeText := DRY_RUN_MODE ? " (DRY RUN)" : ""
+    Tooltip("Helper " state modeText)
     SetTimer () => Tooltip(), -2000
-    LogAction("System", 0, 0, "Helper toggled to " state)
+    LogAction("System", 0, 0, "Helper toggled to " state modeText)
 }
 
 ; Ctrl+Alt+Esc: Emergency Exit
@@ -94,14 +118,14 @@ ScanLoop()
     if (!IsSafeToClick())
         return
 
-    ; Check for Accept button first (it has priority detection)
+    ; Check for Accept button first
     if (ScanForButton(ACCEPT_IMG, &foundX, &foundY))
     {
         global AcceptPending := true
         global AcceptX := foundX
         global AcceptY := foundY
         Tooltip("Accept Detected at " foundX "," foundY ". Press Ctrl+Alt+A to approve.")
-        return ; Don't auto-click others while Accept is pending
+        return 
     }
     else
     {
@@ -129,10 +153,8 @@ ScanLoop()
 
 IsSafeToClick()
 {
-    ; 1. Check Active Window
     title := WinGetTitle("A")
     
-    ; Must be an allowed window
     isAllowed := false
     for allowed in ALLOWED_TITLES
     {
@@ -145,14 +167,12 @@ IsSafeToClick()
     if (!isAllowed)
         return false
 
-    ; Must not be a forbidden window
     for forbidden in FORBIDDEN_TITLES
     {
         if (InStr(title, forbidden))
             return false
     }
 
-    ; 2. Check Mouse Movement
     global LastMouseX, LastMouseY
     currX := 0
     currY := 0
@@ -162,7 +182,7 @@ IsSafeToClick()
     {
         LastMouseX := currX
         LastMouseY := currY
-        return false ; Mouse is moving, don't interfere
+        return false 
     }
     
     return true
@@ -178,7 +198,6 @@ ScanForButton(imgPath, &foundX, &foundY)
     {
         if ImageSearch(&foundX, &foundY, region.x1, region.y1, region.x2, region.y2, "*50 " imgPath)
         {
-            ; Center the click (approximate offset, adjust if needed)
             foundX += 10
             foundY += 10
             return true
@@ -192,11 +211,18 @@ DoClick(x, y, type)
     if (!CheckRateLimit())
         return
 
+    if (DRY_RUN_MODE)
+    {
+        LogAction("DRY_RUN_DETECTED", x, y, WinGetTitle("A") " | Button: " type)
+        Tooltip("DRY RUN: Detected " type " at " x "," y)
+        SetTimer () => Tooltip(), -2000
+        return
+    }
+
     CoordMode "Mouse", "Screen"
     Click(x, y)
     LogAction(type, x, y, WinGetTitle("A"))
     
-    ; Visual feedback
     Tooltip("Clicked " type " at " x "," y)
     SetTimer () => Tooltip(), -1000
 }
@@ -206,7 +232,6 @@ CheckRateLimit()
     global ClickTimestamps
     now := A_TickCount
     
-    ; Clean up old timestamps (older than 1 minute)
     newTimestamps := []
     for ts in ClickTimestamps
     {
@@ -215,7 +240,6 @@ CheckRateLimit()
     }
     ClickTimestamps := newTimestamps
 
-    ; Check 1 click per second
     if (ClickTimestamps.Length > 0)
     {
         lastClick := ClickTimestamps[ClickTimestamps.Length]
@@ -223,7 +247,6 @@ CheckRateLimit()
             return false
     }
 
-    ; Check 20 clicks per minute
     if (ClickTimestamps.Length >= MAX_CLICKS_PER_MIN)
         return false
 
@@ -239,6 +262,5 @@ LogAction(type, x, y, windowTitle)
     try {
         FileAppend(logLine, LOG_FILE)
     } catch {
-        ; Ignore log failures
     }
 }

@@ -1,3 +1,4 @@
-*.log
+logs/*.log
 *.png
 !assets/buttons/*.png
+!logs/.gitkeep
