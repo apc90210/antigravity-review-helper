@@ -51,3 +51,19 @@ This document outlines the steps for manually validating the Antigravity Review 
 ## Warning
 - **Live Mode** performs real mouse clicks. Ensure your cursor is not obstructed.
 - Do not use the computer for other tasks while live automation is active in a foreground window.
+
+## Troubleshooting
+
+### Error: Target window not found
+**Cause**: The target Antigravity window was closed or reloaded, and the helper is trying to access an old window handle (HWND).
+
+**Fix**:
+1. Click **Stop Selected** or **Stop All** in the helper.
+2. Click **Refresh List** to detect the new window handles.
+3. Select the correct project/window from the list again.
+4. Click **Start Selected**.
+
+### Helper Status shows "Stopped" automatically
+**Cause**: The helper detected that the monitored window is no longer available and automatically stopped monitoring to prevent a crash.
+
+**Fix**: Same as "Target window not found" above.

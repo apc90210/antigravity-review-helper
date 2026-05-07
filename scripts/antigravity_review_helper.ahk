@@ -159,6 +159,58 @@ ExtractProjectName(title)
     return "Unknown Project"
 }
 
+SafeWinExists(hwnd) {
+    if (!hwnd)
+        return false
+    try {
+        return WinExist("ahk_id " hwnd) != 0
+    } catch {
+        return false
+    }
+}
+
+SafeWinGetTitle(hwnd, fallback := "UNKNOWN_WINDOW") {
+    if (!SafeWinExists(hwnd))
+        return fallback
+    try {
+        return WinGetTitle("ahk_id " hwnd)
+    } catch {
+        return fallback
+    }
+}
+
+SafeWinGetText(hwnd, fallback := "") {
+    if (!SafeWinExists(hwnd))
+        return fallback
+    try {
+        return WinGetText("ahk_id " hwnd)
+    } catch {
+        return fallback
+    }
+}
+
+SafeWinGetMinMax(hwnd) {
+    if (!SafeWinExists(hwnd))
+        return -1
+    try {
+        return WinGetMinMax("ahk_id " hwnd)
+    } catch {
+        return -1
+    }
+}
+
+SafeWinGetPos(hwnd, &x, &y, &w, &h) {
+    x := 0, y := 0, w := 0, h := 0
+    if (!SafeWinExists(hwnd))
+        return false
+    try {
+        WinGetPos(&x, &y, &w, &h, "ahk_id " hwnd)
+        return true
+    } catch {
+        return false
+    }
+}
+
 OnClearLog(*) {
     try {
         FileDelete(LOG_FILE)
@@ -236,7 +288,16 @@ UpdateStatus(newStatus)
         return
     }
     hwnd := MainLV.GetText(RowNumber, 1)
-    title := MainLV.GetText(RowNumber, 4)
+    if (!SafeWinExists(hwnd))
+    {
+        LogAction(hwnd, "START_BLOCKED_WINDOW_NOT_FOUND", 0, 0, "")
+        MsgBox("Selected window no longer exists. Click Refresh List and select the window again.")
+        RefreshWindowList()
+        return
+    }
+    
+    ; Refresh metadata from real window if it exists
+    title := SafeWinGetTitle(hwnd)
     project := ExtractProjectName(title)
     
     if (project = "SELF - DO NOT USE")
@@ -245,20 +306,7 @@ UpdateStatus(newStatus)
         MsgBox("Cannot monitor the helper itself.")
         return
     }
-    if (project = "Unknown Project")
-    {
-        LogAction(hwnd, "START_BLOCKED_UNKNOWN_PROJECT", 0, 0, "")
-        MsgBox("Unknown project structure. Selection blocked.")
-        return
-    }
-    if (!WinExist("ahk_id " hwnd))
-    {
-        LogAction(hwnd, "START_BLOCKED_WINDOW_NOT_FOUND", 0, 0, "")
-        MsgBox("Target window no longer exists.")
-        RefreshWindowList()
-        return
-    }
-    if (WinGetMinMax("ahk_id " hwnd) = -1)
+    if (SafeWinGetMinMax(hwnd) = -1)
     {
         LogAction(hwnd, "START_BLOCKED_MINIMIZED", 0, 0, "")
         MsgBox("Target window is minimized.")
@@ -303,7 +351,7 @@ RefreshWindowList(*)
     WindowConfigs.Clear()
     for hwnd in WinGetList()
     {
-        title := WinGetTitle(hwnd)
+        title := SafeWinGetTitle(hwnd)
         project := ExtractProjectName(title)
         
         ; Explicitly exclude self
@@ -381,9 +429,12 @@ OnManualDebugCapture()
 
 CaptureDebugForWindow(hwnd, triggerType)
 {
-    if (!WinExist("ahk_id " hwnd))
+    if (!SafeWinGetPos(hwnd, &x, &y, &w, &h))
+    {
+        LogAction(hwnd, "DEBUG_TARGET_WINDOW_GONE", 0, 0, triggerType)
+        UpdateDebugViewer(hwnd, "DEBUG_TARGET_WINDOW_GONE", "NONE")
         return
-    WinGetPos(&x, &y, &w, &h, "ahk_id " hwnd)
+    }
     if (ScanForButton(COPY_DEBUG_IMG, x, y, x+w, y+h, &foundX, &foundY))
     {
         CaptureDebugViaCopyButton(hwnd, foundX, foundY, triggerType)
@@ -403,7 +454,8 @@ CaptureDebugViaCopyButton(hwnd, foundX, foundY, triggerType)
     oldClip := A_Clipboard
     A_Clipboard := ""
     CoordMode "Mouse", "Screen"
-    Click(foundX, foundY)
+    if (SafeWinExists(hwnd))
+        Click(foundX, foundY)
     if (ClipWait(3))
         UpdateDebugViewer(hwnd, A_Clipboard, "COPY_BUTTON")
     else
@@ -498,7 +550,7 @@ ScanForLimits(hwnd)
         return false
     method := "NONE", matchInfo := ""
     try {
-        text := WinGetText("ahk_id " hwnd)
+        text := SafeWinGetText(hwnd)
         for phrase in LIMIT_PHRASES
             if (InStr(text, phrase))
             {
@@ -509,11 +561,12 @@ ScanForLimits(hwnd)
     } catch {
     }
     if (method = "NONE") {
-        WinGetPos(&x, &y, &w, &h, "ahk_id " hwnd)
-        if (ScanForButton(ENABLE_OVERAGES_IMG, x, y, x+w, y+h, &fX, &fY))
-            method := "IMAGE_PREFERRED"
-        else if (ScanForButton(LIMITS_FALLBACK_IMG, x, y, x+w, y+h, &fX, &fY))
-            method := "IMAGE_FALLBACK"
+        if (SafeWinGetPos(hwnd, &x, &y, &w, &h)) {
+            if (ScanForButton(ENABLE_OVERAGES_IMG, x, y, x+w, y+h, &fX, &fY))
+                method := "IMAGE_PREFERRED"
+            else if (ScanForButton(LIMITS_FALLBACK_IMG, x, y, x+w, y+h, &fX, &fY))
+                method := "IMAGE_FALLBACK"
+        }
     }
     if (method != "NONE") {
         if (!config.AlertActive) {
@@ -588,21 +641,37 @@ MainLoop()
         ; Hardened check: only Running or AlwaysOn
         if (!config.Enabled or (config.Status != "Running" and !config.AlwaysOn))
             continue
-        if (!WinExist("ahk_id " hwnd) or WinGetMinMax("ahk_id " hwnd) = -1)
+        
+        if (!SafeWinExists(hwnd)) {
+            config.Status := "Stopped"
+            config.Enabled := 0
+            LogAction(hwnd, "TARGET_WINDOW_GONE", 0, 0, "")
+            ; Attempt to find row in LV to update status
+            Loop MainLV.GetCount() {
+                if (MainLV.GetText(A_Index, 1) = hwndStr) {
+                    MainLV.Modify(A_Index, , , "Stopped")
+                    break
+                }
+            }
+            continue
+        }
+
+        if (SafeWinGetMinMax(hwnd) = -1)
             continue
         
         if (config.AlertActive)
             continue
         
         ; Double check project name
-        title := WinGetTitle(hwnd)
+        title := SafeWinGetTitle(hwnd)
         if (ExtractProjectName(title) = "SELF - DO NOT USE")
             continue
 
         if (ScanForLimits(hwnd))
             continue
             
-        WinGetPos(&x, &y, &w, &h, hwnd)
+        if (!SafeWinGetPos(hwnd, &x, &y, &w, &h))
+            continue
         
         global ContinueAssetMissingLogged
         if (!ContinueAssetMissingLogged and !FileExist(CONTINUE_IMG)) {
@@ -660,15 +729,25 @@ DoClick(hwnd, clickX, clickY, type) {
         return
     }
     CoordMode "Mouse", "Screen"
-    Click(clickX, clickY)
-    LogAction(hwnd, "CLICKED_" StrUpper(type), clickX, clickY, "Live")
+    if (SafeWinExists(hwnd)) {
+        Click(clickX, clickY)
+        LogAction(hwnd, "CLICKED_" StrUpper(type), clickX, clickY, "Live")
+    } else {
+        LogAction(hwnd, "CLICK_SKIPPED_STALE_WINDOW", clickX, clickY, type)
+    }
 }
 
 LogAction(hwnd, event, x, y, actionNote) {
     global LOG_FILE
     static logErrorShown := false
     timestamp := FormatTime(, "yyyy-MM-dd HH:mm:ss")
-    title := (hwnd != 0) ? WinGetTitle(hwnd) : "SYSTEM"
+    title := "SYSTEM"
+    if (hwnd != 0) {
+        if (SafeWinExists(hwnd))
+            title := SafeWinGetTitle(hwnd)
+        else
+            title := "STALE_WINDOW"
+    }
     logLine := timestamp " | " hwnd " | " title " | " event " | " (DRY_RUN_MODE ? "DRY" : "LIVE") " | " x "," y " | " actionNote "`n"
     try {
         FileAppend(logLine, LOG_FILE)
