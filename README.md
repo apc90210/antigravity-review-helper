@@ -1,32 +1,34 @@
-# Antigravity Review Helper
+# Antigravity Review Helper v2
 
 A standalone Windows desktop utility to assist with repetitive UI review actions in Antigravity, VS Code, and Cursor.
 
-## Features
-- **Auto-Clicking**: Automatically clicks "Retry" and "Continue" buttons when detected.
-- **Assisted Accept**: Detects "Accept" buttons and waits for manual hotkey confirmation.
-- **Dual Monitor Support**: Scans the full virtual desktop.
-- **Safety Guards**: Prevents clicking in sensitive windows (Terminals, Password dialogs) and stops if manual mouse movement is detected.
-- **Rate Limiting**: Limits click frequency to prevent unintended behavior.
+## Features (v2)
+- **Multi-Window GUI**: Monitor multiple IDE windows simultaneously with independent settings.
+- **Per-Window Control**: Enable or disable specific actions (Retry, Continue, Accept) for each window.
+- **Auto-Clicking**: Automatically clicks "Retry" and "Continue" buttons when enabled.
+- **Dangerous Mode (Accept All)**: Optionally auto-accept changes (requires explicit confirmation).
+- **Dry-Run Mode**: Test detection logic without performing any real clicks.
+- **Safety Guards**: Click coordinate verification, rate limiting, and forbidden window detection.
 
 ## Project Structure
-- `scripts/`: Contains the AutoHotkey v2 script.
+- `scripts/`: Contains the AutoHotkey v2 GUI script.
 - `assets/buttons/`: Store button screenshots here for detection.
-- `docs/`: Safety rules and usage documentation.
-- `logs/`: Operational logs.
+- `docs/`: Safety rules, usage, and window targeting documentation.
+- `logs/`: Detailed operational logs.
 
-## Setup Instructions
+## Quick Start
 1. Install [AutoHotkey v2](https://www.autohotkey.com/).
-2. Take screenshots of the buttons (Retry, Continue, Accept) and save them in `assets/buttons/`.
-   - See `assets/buttons/README.md` for specific instructions.
-3. Edit `scripts/antigravity_review_helper.ahk` to adjust screen regions if necessary.
-4. Run `scripts/antigravity_review_helper.ahk`.
+2. Capture button screenshots (Retry, Continue, Accept) into `assets/buttons/`.
+3. Run `scripts/antigravity_review_helper.ahk`.
+4. Use **Refresh List** to detect your IDE windows.
+5. Configure the selected window in the GUI and click **Start Selected** or enable **Always On**.
 
 ## Hotkeys
-- **Ctrl + Alt + S**: Toggle Helper Enable/Disable.
-- **Ctrl + Alt + A**: Approve "Accept" click (when button is detected).
-- **Ctrl + Alt + Esc**: Emergency Exit (Stops script).
+- **Ctrl + Alt + A**: Approve "Accept" click for the active IDE window.
+- **Ctrl + Alt + Esc**: Emergency Exit (Stops everything).
 
-## Safety and Logs
-- Logs are saved in `logs/antigravity_review_helper.log`.
-- Review `docs/safety_rules.md` for details on protection mechanisms.
+## Documentation
+- [Usage Guide](docs/usage.md)
+- [Safety Rules](docs/safety_rules.md)
+- [Window Targeting](docs/window_targeting.md)
+- [Dry-Run Testing](docs/dry_run_testing.md)

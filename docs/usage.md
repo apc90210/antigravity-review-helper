@@ -1,28 +1,31 @@
-# Usage Guide
+# Usage Guide (v2 GUI)
 
-## Running the Helper
-1. Ensure AutoHotkey v2 is installed.
-2. Double-click `scripts/antigravity_review_helper.ahk`.
-3. Check the tray icon to ensure the script is running.
+## Starting the Helper
+1. Run `scripts/antigravity_review_helper.ahk`.
+2. Accept the **Safety Briefing**.
+3. The main window will appear. By default, **DRY RUN MODE** is checked.
 
-## Enabling/Disabling
-- The helper starts in a **Disabled** state by default.
-- Press `Ctrl + Alt + S` to enable it.
-- A tooltip will appear near the mouse cursor indicating the current state.
+## Window Management
+1. Click **Refresh List** to see all Antigravity/VS Code/Cursor windows.
+2. Select a window from the list to view its current configuration.
+3. **Check "Enabled"** to allow the helper to process that window.
+4. Use **Start Selected** to begin monitoring, or check **Always On** for continuous detection.
 
-## Button Detection
-- The script looks for `.png` images in `assets/buttons/`.
-- `retry_button.png` -> Auto-clicked.
-- `continue_button.png` -> Auto-clicked.
-- `accept_button.png` -> Detected, then requires `Ctrl + Alt + A`.
+## Action Settings
+- **Retry Auto**: Enable to auto-click "Retry" in the selected window.
+- **Continue Auto**: Enable to auto-click "Continue" in the selected window.
+- **Accept Manual**: Detects "Accept" buttons. You can click them via:
+  - **Ctrl+Alt+A** (when the window is active)
+  - The **Accept Once** button in the GUI.
+- **Accept All (Auto)**: 
+  - **Warning**: This will automatically click "Accept" buttons.
+  - Requires confirmation to enable.
+  - Useful for bulk reviews in trusted windows.
 
-## Handling "Accept"
-1. When the helper detects an "Accept" button, it will display a tooltip with the button's coordinates.
-2. If you want to click it, press `Ctrl + Alt + A`.
-3. The helper will click the button once and clear the detection state.
+## Log Management
+- View detection results and clicks in `logs/antigravity_review_helper.log`.
+- Use **Clear Log** to reset the file.
+- Use **Save Log As...** to export a copy for review.
 
-## Configuration
-Open `scripts/antigravity_review_helper.ahk` in a text editor to:
-- Adjust the `ALLOWED_REGIONS` coordinates.
-- Modify the `RATE_LIMITS`.
-- Change the `SCAN_INTERVAL`.
+## Emergency Exit
+- Press **Ctrl + Alt + Esc** at any time to immediately kill the script.

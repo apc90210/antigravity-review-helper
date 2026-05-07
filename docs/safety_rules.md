@@ -1,39 +1,28 @@
-# Safety Rules
+# Safety Rules (v2)
 
-The Antigravity Review Helper is designed with several layers of protection to ensure it does not interfere with sensitive operations.
+The helper includes multiple layers of protection to prevent accidental or destructive actions.
 
-## 1. Restricted Window Titles
-The helper will **NOT** click if the active window title contains any of the following:
-- terminal
-- powershell
-- cmd
-- password
-- credentials
-- ssh
-- git
-- browser
-- chrome
-- edge
+## 1. Boundary Enforcement
+The helper will **never** click outside the bounding box of the selected IDE window. Even if a button image is found elsewhere on the screen, the click is blocked if it doesn't fall within the window's current rectangle.
 
-## 2. Allowed Window Titles
-The helper will **ONLY** operate if the active window title contains one of:
-- Antigravity
-- Visual Studio Code
-- Cursor
+## 2. Window Content Safety
+The helper will skip any window if its title contains:
+- terminal, powershell, cmd
+- password, credentials
+- ssh, git
+- browser, chrome, edge
 
-## 3. Manual Intervention Guard
-- **Mouse Movement**: If the user is currently moving the mouse manually, the script will skip auto-clicking to avoid "fighting" for control.
-- **Emergency Stop**: Pressing `Ctrl + Alt + Esc` immediately terminates the script.
+## 3. Accept All Safeguards
+- **OFF by default**: Auto-accepting changes is a high-risk operation.
+- **Manual Confirmation**: Enabling this mode triggers a warning dialog.
+- **Dry Run Priority**: Even if enabled, "Accept All" will only log detections if Dry Run mode is active.
 
-## 4. Rate Limiting
-- Maximum **1 click per second**.
-- Maximum **20 clicks per minute**.
-- These limits prevent the script from getting into an infinite click loop.
+## 4. Operational Guards
+- **Mouse Movement**: Detection pauses if the user is moving the mouse.
+- **Minimized Windows**: The helper ignores windows that are minimized.
+- **Rate Limits**: 1 click/sec, 20 clicks/min.
+- **Emergency Stop**: **Ctrl + Alt + Esc** kills the process immediately.
 
-## 5. Semi-Automatic "Accept"
-- The "Accept" button is **never** clicked automatically.
-- It requires a manual `Ctrl + Alt + A` hotkey after detection.
-
-## 6. Region Locks
-- The script only scans defined regions on Monitor 1 and Monitor 2.
-- It will never click outside these pre-configured boundaries.
+## 5. Deployment Safety
+- **Dry Run by Default**: Real clicks are disabled when the script starts.
+- **Log Audit**: Every detection, click, and skipped action is logged with high precision (timestamp, HWND, window title, event type).
