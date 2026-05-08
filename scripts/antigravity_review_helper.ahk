@@ -354,6 +354,23 @@ SafeWinGetPos(hwnd, &x, &y, &w, &h) {
     }
 }
 
+GetWindowSearchRect(hwnd, &left, &top, &right, &bottom, &width, &height) {
+    left := 0, top := 0, right := 0, bottom := 0, width := 0, height := 0
+    if (!SafeWinGetPos(hwnd, &x, &y, &w, &h))
+        return false
+    
+    if (w <= 0 or h <= 0)
+        return false
+
+    left := x
+    top := y
+    width := w
+    height := h
+    right := x + w
+    bottom := y + h
+    return true
+}
+
 OnClearLog(*) {
     try {
         FileDelete(LOG_FILE)
@@ -513,7 +530,7 @@ RefreshWindowList(*)
         
         if (isMatch)
         {
-            config := {Enabled: 0, AlwaysOn: 0, RetryAuto: 0, ContinueAuto: 0, AcceptManual: 1, AcceptAuto: 0, CopyDebugAuto: 0, LimitsMonitor: 1, Status: "Stopped", LastAcceptX: 0, LastAcceptY: 0, LastRetryTime: "", LastCaptureStatus: "Idle", CapturedText: "", AlertActive: false, LastLimitLog: 0, LastScanLogTime: 0}
+            config := {Enabled: 0, AlwaysOn: 0, RetryAuto: 0, ContinueAuto: 0, AcceptManual: 1, AcceptAuto: 0, CopyDebugAuto: 0, LimitsMonitor: 1, Status: "Stopped", LastAcceptX: 0, LastAcceptY: 0, LastRetryTime: "", LastCaptureStatus: "Idle", CapturedText: "", AlertActive: false, LastLimitLog: 0, LastScanLogTime: 0, LastAcceptClickTime: 0, LastRetryClickTime: 0}
             if (oldConfigs.Has("" hwnd))
                 config := oldConfigs["" hwnd]
             
@@ -572,13 +589,13 @@ OnManualDebugCapture()
 
 CaptureDebugForWindow(hwnd, triggerType)
 {
-    if (!SafeWinGetPos(hwnd, &x, &y, &w, &h))
+    if (!GetWindowSearchRect(hwnd, &left, &top, &right, &bottom, &w, &h))
     {
         LogAction(hwnd, "DEBUG_TARGET_WINDOW_GONE", 0, 0, triggerType)
         UpdateDebugViewer(hwnd, "DEBUG_TARGET_WINDOW_GONE", "NONE")
         return
     }
-    if (ScanForButton(COPY_DEBUG_IMG, x, y, x+w, y+h, &foundX, &foundY))
+    if (ScanForButton(COPY_DEBUG_IMG, left, top, right, bottom, &foundX, &foundY))
     {
         CaptureDebugViaCopyButton(hwnd, foundX, foundY, triggerType)
         return
@@ -704,10 +721,10 @@ ScanForLimits(hwnd)
     } catch {
     }
     if (method = "NONE") {
-        if (SafeWinGetPos(hwnd, &x, &y, &w, &h)) {
-            if (ScanForButton(ENABLE_OVERAGES_IMG, x, y, x+w, y+h, &fX, &fY))
+        if (GetWindowSearchRect(hwnd, &left, &top, &right, &bottom, &w, &h)) {
+            if (ScanForButton(ENABLE_OVERAGES_IMG, left, top, right, bottom, &fX, &fY))
                 method := "IMAGE_PREFERRED"
-            else if (ScanForButton(LIMITS_FALLBACK_IMG, x, y, x+w, y+h, &fX, &fY))
+            else if (ScanForButton(LIMITS_FALLBACK_IMG, left, top, right, bottom, &fX, &fY))
                 method := "IMAGE_FALLBACK"
         }
     }
@@ -781,7 +798,7 @@ MainLoop()
     for hwndStr, config in WindowConfigs
     {
         hwnd := Number(hwndStr)
-        x := 0, y := 0, w := 0, h := 0, fX := 0, fY := 0, cX := 0, cY := 0
+        left := 0, top := 0, right := 0, bottom := 0, width := 0, height := 0, fX := 0, fY := 0, cX := 0, cY := 0
         ; Hardened check: only Running or AlwaysOn
         if (!config.Enabled or (config.Status != "Running" and !config.AlwaysOn))
             continue
@@ -814,7 +831,7 @@ MainLoop()
         if (ScanForLimits(hwnd))
             continue
             
-        if (!SafeWinGetPos(hwnd, &x, &y, &w, &h))
+        if (!GetWindowSearchRect(hwnd, &left, &top, &right, &bottom, &width, &height))
             continue
         
         global ContinueAssetMissingLogged
@@ -824,25 +841,49 @@ MainLoop()
         }
 
         fX := 0, fY := 0, cX := 0, cY := 0, foundAccept := false
-        if (ScanForButton(ACCEPT_ALL_IMG, x, y, x+w, y+h, &fX, &fY, 80))
-            foundAccept := true
-        else if (ScanForButton(ACCEPT_FALLBACK_IMG, x, y, x+w, y+h, &fX, &fY, 80))
-            foundAccept := true
+        if (config.AcceptManual or config.AcceptAuto) {
+            ; Diagnostic logging for Accept scan
+            winpos := left "," top "," width "," height
+            search := left "," top "," right "," bottom
+            LogAction(hwnd, "ACCEPT_SCAN_BEGIN", 0, 0, "winpos=" winpos " search=" search)
+
+            if (ScanForButton(ACCEPT_ALL_IMG, left, top, right, bottom, &fX, &fY, 80))
+                foundAccept := true
+            else if (ScanForButton(ACCEPT_FALLBACK_IMG, left, top, right, bottom, &fX, &fY, 80))
+                foundAccept := true
+        }
 
         if (foundAccept) {
             config.LastAcceptX := fX, config.LastAcceptY := fY
+            eventName := (config.AcceptAuto ? "ACCEPT_ALL_DETECTED" : "ACCEPT_MANUAL_DETECTED")
+            
             if (DRY_RUN_MODE)
-                LogAction(hwnd, "DRY_RUN_ACCEPT_ALL_DETECTED", fX, fY, "Dry Run")
-            if (config.AcceptAuto)
-                DoClick(hwnd, fX, fY, "AcceptAllAuto")
+                LogAction(hwnd, "DRY_RUN_" eventName, fX, fY, "Dry Run")
+            else {
+                LogAction(hwnd, eventName, fX, fY, "Detected")
+                if (config.AcceptAuto) {
+                    now := A_TickCount
+                    if (now - config.LastAcceptClickTime > 10000) {
+                        DoClick(hwnd, fX, fY, "ACCEPT_ALL_AUTO")
+                        config.LastAcceptClickTime := now
+                    } else {
+                        LogAction(hwnd, "ACCEPT_LIVE_COOLDOWN_SKIP", 0, 0, "Cooldown")
+                    }
+                }
+            }
             continue
         }
 
-        if (ScanForButton(RETRY_IMG, x, y, x+w, y+h, &fX, &fY)) {
+        ; Diagnostic logging for Retry scan
+        winpos := left "," top "," width "," height
+        search := left "," top "," right "," bottom
+        LogAction(hwnd, "RETRY_SCAN_BEGIN", 0, 0, "winpos=" winpos " search=" search)
+
+        if (ScanForButton(RETRY_IMG, left, top, right, bottom, &fX, &fY)) {
             if (DRY_RUN_MODE)
                 LogAction(hwnd, "DRY_RUN_RETRY_DETECTED", fX, fY, "Dry Run")
             if (DRY_RUN_MODE) {
-                if (ScanForButton(COPY_DEBUG_IMG, x, y, x+w, y+h, &cX, &cY))
+                if (ScanForButton(COPY_DEBUG_IMG, left, top, right, bottom, &cX, &cY))
                     LogAction(hwnd, "DRY_RUN_COPY_DEBUG_INFO_DETECTED", cX, cY, "Dry Run")
             } else if (config.CopyDebugAuto)
                 CaptureDebugForWindow(hwnd, "AUTO")
@@ -867,6 +908,17 @@ ScanForButton(imgPath, x1, y1, x2, y2, &fX, &fY, tolerance := 50) {
 }
 
 DoClick(hwnd, clickX, clickY, type) {
+    if (!GetWindowSearchRect(hwnd, &left, &top, &right, &bottom, &width, &height)) {
+        LogAction(hwnd, "CLICK_SKIPPED_STALE_WINDOW", clickX, clickY, type)
+        return
+    }
+
+    ; Boundary validation
+    if (clickX < left or clickX > right or clickY < top or clickY > bottom) {
+        LogAction(hwnd, "CLICK_BLOCKED_OUT_OF_BOUNDS", clickX, clickY, "L=" left " T=" top " R=" right " B=" bottom)
+        return
+    }
+
     if (DRY_RUN_MODE) {
         upperType := StrUpper(type)
         LogAction(hwnd, "DRY_RUN_CLICK_BLOCKED", clickX, clickY, "Type: " upperType)
