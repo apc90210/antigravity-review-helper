@@ -539,7 +539,7 @@ UpdateStatus(newStatus)
         LogAction(hwnd, "STATUS_CHANGED", 0, 0, newStatus)
         
         ; Log detailed runtime state for debugging
-        stateNote := "Enabled=" config.Enabled " Retry=" config.RetryAuto " Accept=" config.AcceptAuto " Limits=" config.LimitsMonitor " Status=" config.Status
+        stateNote := "Enabled=" config.Enabled " Retry=" config.RetryAuto " AcceptAuto=" config.AcceptAuto " AcceptManual=" config.AcceptManual " Limits=" config.LimitsMonitor " Status=" config.Status " DryRun=" (DRY_RUN_MODE ? 1 : 0)
         LogAction(hwnd, "WINDOW_CONFIG_RUNTIME_STATE", 0, 0, stateNote)
     }
 }
@@ -884,14 +884,21 @@ MainLoop()
         
         ; Rate-limited diagnostic log for running windows (every 10s)
         now := A_TickCount
-        if (config.Status = "Running" and now - config.LastScanLogTime > 10000) {
-            stateNote := "Enabled=" config.Enabled " Status=" config.Status " Retry=" config.RetryAuto " Accept=" config.AcceptAuto " Limits=" config.LimitsMonitor " Dry=" (DRY_RUN_MODE ? "ON" : "OFF")
-            LogAction(hwnd, "MAINLOOP_CONFIG_STATE", 0, 0, stateNote)
+        if ((config.Status = "Running" or config.AlwaysOn) and config.Enabled and now - config.LastScanLogTime > 10000) {
+            stateNote := "Enabled=" config.Enabled " Status=" config.Status " Retry=" config.RetryAuto " AcceptAuto=" config.AcceptAuto " AcceptManual=" config.AcceptManual " Limits=" config.LimitsMonitor " Dry=" (DRY_RUN_MODE ? "ON" : "OFF")
+            LogAction(hwnd, "MAINLOOP_TICK_SELECTED", 0, 0, stateNote)
+            LogAction(hwnd, "WINDOW_CONFIG_RUNTIME_STATE", 0, 0, stateNote)
             config.LastScanLogTime := now
         }
 
         ; Hardened check: only Running or AlwaysOn
-        if (!config.Enabled or (config.Status != "Running" and !config.AlwaysOn))
+        if (!config.Enabled) {
+            if (config.Status = "Running")
+                LogAction(hwnd, "MAINLOOP_SKIP_REASON", 0, 0, "Enabled=0")
+            continue
+        }
+        
+        if (config.Status != "Running" and !config.AlwaysOn)
             continue
         
         if (!SafeWinExists(hwnd)) {
@@ -908,19 +915,33 @@ MainLoop()
             continue
         }
 
-        if (SafeWinGetMinMax(hwnd) = -1)
+        if (SafeWinGetMinMax(hwnd) = -1) {
+            ; LogAction(hwnd, "MAINLOOP_SKIP_REASON", 0, 0, "Minimized")
             continue
+        }
         
-        if (config.AlertActive)
+        if (config.AlertActive) {
+            if (now - config.LastLimitLog > 30000) {
+                LogAction(hwnd, "MAINLOOP_SKIP_REASON", 0, 0, "AlertActive")
+                config.LastLimitLog := now
+            }
             continue
+        }
         
         ; Double check project name
         title := SafeWinGetTitle(hwnd)
         if (ExtractProjectName(title) = "SELF - DO NOT USE")
             continue
 
-        if (ScanForLimits(hwnd))
+        ; Start actual scan
+        if (now - config.LastScanLogTime > 5000) { ; Rate limit scan begin log
+             LogAction(hwnd, "ACTION_SCAN_BEGIN", 0, 0, "")
+        }
+
+        if (ScanForLimits(hwnd)) {
+            LogAction(hwnd, "ACTION_SCAN_RESULT", 0, 0, "LIMITS_FOUND")
             continue
+        }
             
         if (!SafeWinGetPos(hwnd, &x, &y, &w, &h))
             continue
@@ -939,21 +960,31 @@ MainLoop()
 
         if (foundAccept) {
             config.LastAcceptX := fX, config.LastAcceptY := fY
-            if (DRY_RUN_MODE)
-                LogAction(hwnd, "DRY_RUN_ACCEPT_ALL_DETECTED", fX, fY, "Dry Run")
-            if (config.AcceptAuto)
+            
+            if (config.AcceptAuto) {
+                LogAction(hwnd, "ACTION_SCAN_RESULT", fX, fY, "ACCEPT_ALL_AUTO")
+                if (DRY_RUN_MODE)
+                    LogAction(hwnd, "DRY_RUN_ACCEPT_ALL_DETECTED", fX, fY, "Dry Run")
                 DoClick(hwnd, fX, fY, "AcceptAllAuto")
+            } else if (config.AcceptManual) {
+                LogAction(hwnd, "ACTION_SCAN_RESULT", fX, fY, "ACCEPT_MANUAL")
+                if (DRY_RUN_MODE)
+                    LogAction(hwnd, "DRY_RUN_ACCEPT_MANUAL_DETECTED", fX, fY, "Dry Run")
+            }
             continue
         }
 
         if (ScanForButton(RETRY_IMG, x, y, x+w, y+h, &fX, &fY)) {
+            LogAction(hwnd, "ACTION_SCAN_RESULT", fX, fY, "RETRY_FOUND")
             if (DRY_RUN_MODE)
                 LogAction(hwnd, "DRY_RUN_RETRY_DETECTED", fX, fY, "Dry Run")
+            
             if (DRY_RUN_MODE) {
                 if (ScanForButton(COPY_DEBUG_IMG, x, y, x+w, y+h, &cX, &cY))
                     LogAction(hwnd, "DRY_RUN_COPY_DEBUG_INFO_DETECTED", cX, cY, "Dry Run")
             } else if (config.CopyDebugAuto)
                 CaptureDebugForWindow(hwnd, "AUTO")
+            
             if (config.RetryAuto)
                 DoClick(hwnd, fX, fY, "Retry")
             continue

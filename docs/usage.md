@@ -56,3 +56,13 @@ A visible scrolling log that shows the most recent 500 events:
 - **Global Dry Run Mode (Safety)**: When checked (default), the helper will log detections and increment counters but **never** click real buttons.
 - To enable live clicks, uncheck the box and accept the **DANGER** confirmation.
 - The status bar will turn **RED** and show **LIVE CLICKS ENABLED** when Dry Run is OFF.
+
+## Troubleshooting
+
+### If events do not fire:
+1. **Check Live Event Log**: Look for `MAINLOOP_TICK_SELECTED` or `WINDOW_CONFIG_RUNTIME_STATE` entries.
+2. **Verify Configuration**: Ensure `Enabled=1` and `Status=Running` (or `AlwaysOn=1`) are shown in the runtime state log.
+3. **Check Action Flags**: Verify the specific action flag (e.g., `Retry=1` or `AcceptAuto=1`) is set to 1 in the log.
+4. **Check Action Scan Begin**: If `ACTION_SCAN_BEGIN` appears but no detection follows, recapture the button assets or verify the target window is fully visible and not obstructed.
+5. **Check Logic Gates**: If no `ACTION_SCAN_BEGIN` appears, the helper's internal safety gates (like `AlertActive` or `StaleHWND`) are blocking the scan. Check for `MAINLOOP_SKIP_REASON` in the log for details.
+6. **Limits Alert**: If a **LIMITS** popup is open or was not properly cleared, monitoring is paused for that window. Click **OK** on the red popup.
