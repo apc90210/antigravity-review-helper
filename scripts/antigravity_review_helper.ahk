@@ -8,6 +8,7 @@
 global DRY_RUN_MODE := true
 global IS_PAUSED := false
 global SAFETY_CONFIRMATION_REQUIRED := true
+global SINGLE_ACTIVE_TARGET_MODE := true
 
 ; Global state
 global WindowConfigs := Map() ; hwnd -> Object
@@ -188,9 +189,9 @@ btnClearEventLog.OnEvent("Click", (*) => EventLogLV.Delete())
 
 ; Global Controls
 MyGui.Add("Button", "x10 y480 w100", "Refresh List").OnEvent("Click", RefreshWindowList)
-MyGui.Add("Button", "x120 y480 w100", "Start Selected").OnEvent("Click", (*) => UpdateStatus("Running"))
+MyGui.Add("Button", "x120 y480 w100", "Start Selected Only").OnEvent("Click", (*) => UpdateStatus("Running"))
 MyGui.Add("Button", "x230 y480 w100", "Stop Selected").OnEvent("Click", (*) => UpdateStatus("Stopped"))
-MyGui.Add("Button", "x340 y480 w100", "Stop All").OnEvent("Click", StopAll)
+MyGui.Add("Button", "x340 y480 w120", "Stop All Monitoring").OnEvent("Click", StopAll)
 MyGui.Add("Button", "x450 y480 w100", "Clear Log").OnEvent("Click", OnClearLog)
 MyGui.Add("Button", "x560 y480 w50", "Exit").OnEvent("Click", (*) => ExitApp())
 
@@ -535,30 +536,87 @@ UpdateStatus(newStatus)
     if (WindowConfigs.Has(hwndStr))
     {
         config := WindowConfigs[hwndStr]
+        
+        if (newStatus = "Running") {
+            if (SINGLE_ACTIVE_TARGET_MODE) {
+                stoppedOthers := StopAllConfigsExcept(hwnd)
+                if (stoppedOthers > 0) {
+                    LogAction(hwnd, "STOPPED_OTHER_TARGETS", 0, 0, "Count: " stoppedOthers)
+                }
+                LogAction(hwnd, "START_SELECTED_SINGLE_TARGET", 0, 0, "")
+            }
+        } else if (newStatus = "Stopped") {
+            config.AlwaysOn := false ; Stop background scanning if explicitly stopped
+            LogAction(hwnd, "STOP_SELECTED_APPLIED", 0, 0, "")
+        }
+
         config.Status := newStatus
+        WindowConfigs[hwndStr] := config
+        
         MainLV.Modify(RowNumber, , , newStatus)
         LogAction(hwnd, "STATUS_CHANGED", 0, 0, newStatus)
         
+        ; Reload controls to reflect state (especially AlwaysOn if it was cleared)
+        LoadConfigIntoControls(hwnd)
+
         ; Log detailed runtime state for debugging
-        stateNote := "Enabled=" config.Enabled " Retry=" config.RetryAuto " AcceptAuto=" config.AcceptAuto " AcceptManual=" config.AcceptManual " Limits=" config.LimitsMonitor " Status=" config.Status " DryRun=" (DRY_RUN_MODE ? 1 : 0)
+        stateNote := "Enabled=" config.Enabled " Retry=" config.RetryAuto " AcceptAuto=" config.AcceptAuto " AcceptManual=" config.AcceptManual " Limits=" config.LimitsMonitor " Status=" config.Status " AlwaysOn=" config.AlwaysOn " DryRun=" (DRY_RUN_MODE ? 1 : 0)
         LogAction(hwnd, "WINDOW_CONFIG_RUNTIME_STATE", 0, 0, stateNote)
     }
 }
 
 StopAll(*)
 {
+    global WindowConfigs
     ; Save current selection config before stopping all
     SaveCurrentSelectionConfig()
     
+    stoppedCount := 0
     for hwndStr, config in WindowConfigs
     {
         config.Status := "Stopped"
+        config.AlwaysOn := false ; Stop all background scanning
+        WindowConfigs[hwndStr] := config
+        stoppedCount += 1
+        
         if (config.AlertActive)
             ClearAlert(Number(hwndStr))
     }
+    
     Loop MainLV.GetCount()
         MainLV.Modify(A_Index, , , "Stopped")
-    LogAction(0, "STOP_ALL_COMMAND", 0, 0, "")
+        
+    LogAction(0, "STOP_ALL_APPLIED", 0, 0, "Count: " stoppedCount)
+    
+    ; Refresh controls for current selection
+    if (CurrentSelectedHwnd)
+        LoadConfigIntoControls(CurrentSelectedHwnd)
+}
+
+StopAllConfigsExcept(hwndToKeep) {
+    global WindowConfigs, MainLV
+    stoppedCount := 0
+    hwndToKeepStr := "" hwndToKeep
+
+    for hwndStr, config in WindowConfigs {
+        if (hwndStr != hwndToKeepStr) {
+            if (config.Status != "Stopped" or config.AlwaysOn) {
+                config.Status := "Stopped"
+                config.AlwaysOn := false
+                WindowConfigs[hwndStr] := config
+                stoppedCount += 1
+                
+                ; Update ListView for this hwnd
+                Loop MainLV.GetCount() {
+                    if (MainLV.GetText(A_Index, 1) = hwndStr) {
+                        MainLV.Modify(A_Index, , , "Stopped")
+                        break
+                    }
+                }
+            }
+        }
+    }
+    return stoppedCount
 }
 
 RefreshWindowList(*)
@@ -894,13 +952,21 @@ MainLoop()
 
         ; Hardened check: only Running or AlwaysOn
         if (!config.Enabled) {
-            if (config.Status = "Running")
+            if (now - config.LastScanLogTime > 15000)
                 LogAction(hwnd, "MAINLOOP_SKIP_REASON", 0, 0, "Enabled=0")
             continue
         }
         
-        if (config.Status != "Running" and !config.AlwaysOn)
+        if (config.Status != "Running" and !config.AlwaysOn) {
+            if (now - config.LastScanLogTime > 15000)
+                LogAction(hwnd, "MAINLOOP_SKIP_REASON", 0, 0, "Status=" config.Status " AlwaysOn=" config.AlwaysOn)
             continue
+        }
+        
+        ; Diagnostic for active scanning
+        if (now - config.LastScanLogTime > 10000) {
+            LogAction(hwnd, "MAINLOOP_ACTIVE_WINDOW", 0, 0, "Status=" config.Status " AlwaysOn=" config.AlwaysOn)
+        }
         
         if (!SafeWinExists(hwnd)) {
             config.Status := "Stopped"

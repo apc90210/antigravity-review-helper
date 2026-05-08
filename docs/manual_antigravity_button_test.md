@@ -23,7 +23,7 @@ This document outlines the steps for manually validating the Antigravity Review 
 
 ### 3. Dry Run Validation (Recommended)
 1. Enable the desired action (e.g., **Retry Auto**).
-2. Click **Start Selected**.
+2. Click **Start Selected Only**.
 3. Perform an action in Antigravity that triggers the button (e.g., cause a failure to show Retry).
 4. Wait for the helper to detect the button.
 5. Check the **Live Event Log** panel in the GUI. You should see a `DRY_RUN_RETRY_DETECTED` or `DRY_RUN_CLICK_BLOCKED` entry.
@@ -38,8 +38,8 @@ This document outlines the steps for manually validating the Antigravity Review 
 2. Uncheck **Global Dry Run Mode**.
 3. Confirm the **DANGER** dialog. The status bar will turn RED.
 4. Ensure only the specific action you want to test is enabled.
-5. Click **Start Selected**.
-6. The helper will now perform real clicks inside the selected window only.
+5. Click **Start Selected Only**.
+6. The helper will now perform real clicks inside the selected window only. Any other active projects will be stopped automatically.
 7. **Immediately** click **Stop Selected** or use **Ctrl+Alt+S** to pause after the test.
 
 ### 5. Limits Detection
@@ -50,7 +50,7 @@ This document outlines the steps for manually validating the Antigravity Review 
 ## Emergency Controls
 - **Ctrl+Alt+Esc**: Immediately terminates the helper.
 - **Ctrl+Alt+S**: Toggles Pause/Resume for monitoring.
-- **Stop All**: Stops monitoring for all windows.
+- **Stop All Monitoring**: Stops monitoring for all windows.
 
 ## Warning
 - **Live Mode** performs real mouse clicks. Ensure your cursor is not obstructed.
@@ -65,10 +65,10 @@ This document outlines the steps for manually validating the Antigravity Review 
 1. Ensure you are running version **v0.2.1-stale-hwnd-fix** or newer (check the window title).
 2. If this error appears in an older version, the helper may crash.
 3. In v0.2.1+, the helper will show a friendly message instead of crashing.
-4. Click **Stop Selected** or **Stop All** in the helper.
+4. Click **Stop Selected** or **Stop All Monitoring** in the helper.
 5. Click **Refresh List** to detect the new window handles.
 6. Select the correct project/window from the list again.
-7. Click **Start Selected**.
+7. Click **Start Selected Only**.
 
 ### "Accept All" visible but not detected
 If the button is visible in Antigravity but not logged in the helper:
