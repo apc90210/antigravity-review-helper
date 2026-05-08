@@ -94,18 +94,16 @@ if (SAFETY_CONFIRMATION_REQUIRED)
     }
 }
 
-; --- GUI STYLING ---
 MyGui := Gui("+Resize", "Antigravity Review Helper v0.2.2-overlay")
-MyGui.BackColor := "1e1e1e"
-MyGui.SetFont("s9 cD4D4D4", "Segoe UI Semibold")
+MyGui.SetFont("s9", "Segoe UI")
 
 ; Initialize Counters
 InitCounters()
 
 ; Window List (Left Side)
-MyGui.Add("Text", "x10 y10 c4EC9B0", "Detected Antigravity Project Windows:")
+MyGui.Add("Text", "x10 y10", "Detected Antigravity Project Windows:")
 ; HWND | Status | Project | Title
-global MainLV := MyGui.Add("ListView", "x10 y30 w550 h120 Background2D2D2D cD4D4D4 +Grid", ["HWND", "Status", "Project", "Title"])
+global MainLV := MyGui.Add("ListView", "x10 y30 w550 h120 +Grid", ["HWND", "Status", "Project", "Title"])
 MainLV.ModifyCol(1, 70)
 MainLV.ModifyCol(2, 100)
 MainLV.ModifyCol(3, 160)
@@ -113,7 +111,7 @@ MainLV.ModifyCol(4, 200)
 MainLV.OnEvent("Click", OnLVClick)
 
 ; Event Counters (Right Side)
-MyGui.Add("GroupBox", "x570 y10 w410 h250 c4EC9B0", "Event Counters (Runtime Only)")
+MyGui.Add("GroupBox", "x570 y10 w410 h250", "Event Counters (Runtime Only)")
 yPos := 30
 AddCounterUI(MyGui, "TotalEvents", "Total Events:", 580, yPos)
 yPos += 20
@@ -144,7 +142,7 @@ btnResetCounters := MyGui.Add("Button", "x580 y225 w120", "Reset Counters")
 btnResetCounters.OnEvent("Click", (*) => ResetCounters())
 
 ; Configuration Pane
-MyGui.Add("GroupBox", "x10 y160 w550 h100 c4EC9B0", "Selected Window Configuration")
+MyGui.Add("GroupBox", "x10 y160 w550 h100", "Selected Window Configuration")
 global chkEnabled := MyGui.Add("Checkbox", "x20 y180", "Enabled")
 chkEnabled.OnEvent("Click", OnCheckboxClick)
 global chkAlwaysOn := MyGui.Add("Checkbox", "x100 y180", "Always On")
@@ -155,7 +153,7 @@ global chkContinue := MyGui.Add("Checkbox", "x300 y180", "Continue Auto")
 chkContinue.OnEvent("Click", OnCheckboxClick)
 global chkAcceptManual := MyGui.Add("Checkbox", "x420 y180", "Accept Manual (Prompt)")
 chkAcceptManual.OnEvent("Click", OnCheckboxClick)
-global chkAcceptAuto := MyGui.Add("Checkbox", "x20 y205 cFF4444", "Accept All Auto (CAUTION)")
+global chkAcceptAuto := MyGui.Add("Checkbox", "x20 y205 cRed", "Accept All Auto (CAUTION)")
 chkAcceptAuto.OnEvent("Click", OnAcceptAutoClick)
 
 global chkCopyDebugAuto := MyGui.Add("Checkbox", "x200 y205", "Copy Debug Info Auto")
@@ -164,8 +162,8 @@ global chkLimitsMonitor := MyGui.Add("Checkbox", "x420 y205 Checked", "Limits Al
 chkLimitsMonitor.OnEvent("Click", OnCheckboxClick)
 
 ; Debug Viewer Panel (Left)
-MyGui.Add("GroupBox", "x10 y270 w550 h200 c4EC9B0", "Debug Viewer (Sanitized)")
-global editDebugText := MyGui.Add("Edit", "x20 y290 w530 h120 ReadOnly vDebugText Background2D2D2D cD4D4D4", "")
+MyGui.Add("GroupBox", "x10 y270 w550 h200", "Debug Viewer (Sanitized)")
+global editDebugText := MyGui.Add("Edit", "x20 y290 w530 h120 ReadOnly vDebugText", "")
 global txtCaptureStatus := MyGui.Add("Text", "x20 y420 w200", "Last Detection: None")
 global txtRedactionStatus := MyGui.Add("Text", "x250 y420 w280", "Redaction Status: Idle")
 btnRefreshDebug := MyGui.Add("Button", "x20 y440 w100", "Refresh Debug")
@@ -178,8 +176,8 @@ btnSaveSnapshot := MyGui.Add("Button", "x340 y440 w150", "Save Sanitized Snapsho
 btnSaveSnapshot.OnEvent("Click", OnSaveSnapshot)
 
 ; Live Event Log (Right)
-MyGui.Add("GroupBox", "x570 y270 w410 h270 c4EC9B0", "Live Event Log")
-global EventLogLV := MyGui.Add("ListView", "x580 y290 w390 h210 Background2D2D2D cD4D4D4 +Grid", ["Time", "Project", "Event", "Mode", "Note"])
+MyGui.Add("GroupBox", "x570 y270 w410 h270", "Live Event Log")
+global EventLogLV := MyGui.Add("ListView", "x580 y290 w390 h210 +Grid", ["Time", "Project", "Event", "Mode", "Note"])
 EventLogLV.ModifyCol(1, 60)
 EventLogLV.ModifyCol(2, 80)
 EventLogLV.ModifyCol(3, 140)
@@ -199,7 +197,7 @@ MyGui.Add("Button", "x560 y480 w50", "Exit").OnEvent("Click", (*) => ExitApp())
 global chkDryRunGlobal := MyGui.Add("Checkbox", "x10 y505 Checked", "Global Dry Run Mode (Safety)")
 chkDryRunGlobal.OnEvent("Click", OnDryRunToggle)
 
-global txtGlobalStatus := MyGui.Add("Text", "x10 y525 w600 c4EC9B0", "Helper: RUNNING | Dry Run: ON")
+global txtGlobalStatus := MyGui.Add("Text", "x10 y525 w600 cBlue", "Helper: RUNNING | Dry Run: ON")
 MyGui.Add("Text", "x450 y525 w160 cGray Right", "Emergency: Ctrl+Alt+Esc")
 
 MyGui.Show("w1000 h550")
