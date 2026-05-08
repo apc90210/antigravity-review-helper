@@ -142,15 +142,22 @@ btnResetCounters.OnEvent("Click", (*) => ResetCounters())
 ; Configuration Pane
 MyGui.Add("GroupBox", "x10 y160 w550 h100", "Selected Window Configuration")
 chkEnabled := MyGui.Add("Checkbox", "x20 y180", "Enabled")
+chkEnabled.OnEvent("Click", OnCheckboxClick)
 chkAlwaysOn := MyGui.Add("Checkbox", "x100 y180", "Always On")
+chkAlwaysOn.OnEvent("Click", OnCheckboxClick)
 chkRetry := MyGui.Add("Checkbox", "x200 y180", "Retry Auto")
+chkRetry.OnEvent("Click", OnCheckboxClick)
 chkContinue := MyGui.Add("Checkbox", "x300 y180", "Continue Auto")
+chkContinue.OnEvent("Click", OnCheckboxClick)
 chkAcceptManual := MyGui.Add("Checkbox", "x420 y180", "Accept Manual (Prompt)")
+chkAcceptManual.OnEvent("Click", OnCheckboxClick)
 chkAcceptAuto := MyGui.Add("Checkbox", "x20 y205 cRed", "Accept All Auto (CAUTION)")
 chkAcceptAuto.OnEvent("Click", OnAcceptAutoClick)
 
 chkCopyDebugAuto := MyGui.Add("Checkbox", "x200 y205", "Copy Debug Info Auto")
+chkCopyDebugAuto.OnEvent("Click", OnCheckboxClick)
 chkLimitsMonitor := MyGui.Add("Checkbox", "x420 y205 Checked", "Limits Alert Monitor")
+chkLimitsMonitor.OnEvent("Click", OnCheckboxClick)
 
 ; Debug Viewer Panel (Left)
 MyGui.Add("GroupBox", "x10 y270 w550 h200", "Debug Viewer (Sanitized)")
@@ -397,14 +404,25 @@ OnLVClick(targetLV, RowNumber)
     txtCaptureStatus.Value := "Last Detection: " (config.LastRetryTime ? config.LastRetryTime : "None")
     txtRedactionStatus.Value := "Redaction Status: " (config.LastCaptureStatus ? config.LastCaptureStatus : "Idle")
     editDebugText.Value := config.CapturedText ? config.CapturedText : ""
+}
+
+OnCheckboxClick(ctrl, *)
+{
+    Row := MainLV.GetNext()
+    if (!Row)
+        return
+    hwnd := MainLV.GetText(Row, 1)
+    if (!WindowConfigs.Has(hwnd))
+        return
+    config := WindowConfigs[hwnd]
     
-    chkEnabled.OnEvent("Click", (ctrl, *) => (config.Enabled := ctrl.Value))
-    chkAlwaysOn.OnEvent("Click", (ctrl, *) => (config.AlwaysOn := ctrl.Value))
-    chkRetry.OnEvent("Click", (ctrl, *) => (config.RetryAuto := ctrl.Value))
-    chkContinue.OnEvent("Click", (ctrl, *) => (config.ContinueAuto := ctrl.Value))
-    chkAcceptManual.OnEvent("Click", (ctrl, *) => (config.AcceptManual := ctrl.Value))
-    chkCopyDebugAuto.OnEvent("Click", (ctrl, *) => (config.CopyDebugAuto := ctrl.Value))
-    chkLimitsMonitor.OnEvent("Click", (ctrl, *) => (config.LimitsMonitor := ctrl.Value))
+    if (ctrl = chkEnabled) config.Enabled := ctrl.Value
+    else if (ctrl = chkAlwaysOn) config.AlwaysOn := ctrl.Value
+    else if (ctrl = chkRetry) config.RetryAuto := ctrl.Value
+    else if (ctrl = chkContinue) config.ContinueAuto := ctrl.Value
+    else if (ctrl = chkAcceptManual) config.AcceptManual := ctrl.Value
+    else if (ctrl = chkCopyDebugAuto) config.CopyDebugAuto := ctrl.Value
+    else if (ctrl = chkLimitsMonitor) config.LimitsMonitor := ctrl.Value
 }
 
 OnAcceptAutoClick(ctrl, *)
@@ -799,8 +817,9 @@ MainLoop()
     {
         hwnd := Number(hwndStr)
         left := 0, top := 0, right := 0, bottom := 0, width := 0, height := 0, fX := 0, fY := 0, cX := 0, cY := 0
-        ; Hardened check: only Running or AlwaysOn
-        if (!config.Enabled or (config.Status != "Running" and !config.AlwaysOn))
+        ; Hardened gate: Only scan if Status is Running AND Enabled is true.
+        ; AlwaysOn logic is restricted to Running status in this fix to prevent idle scan logs.
+        if (config.Status != "Running" or !config.Enabled)
             continue
         
         if (!SafeWinExists(hwnd)) {
