@@ -80,7 +80,13 @@ If the button is visible in Antigravity but not logged in the helper:
 - **First Live Test**: It is recommended to test **Retry Auto** as your first live action.
 - **Accept All**: Only enable live Accept All after you have seen `DRY_RUN_ACCEPT_ALL_DETECTED` multiple times in the logs and understand the operational risk.
 
-### Helper Status shows "Stopped" automatically
-**Cause**: The helper detected that the monitored window is no longer available and automatically stopped monitoring to prevent a crash.
+### Retry Diagnostics (v0.2.2-overlay)
+If **Retry Detected** counter is not incrementing, check the `Live Event Log`:
 
-**Fix**: Same as "Target window not found" above.
+1. **RETRY_SCAN_BEGIN**: Shows the exact search area and asset paths being checked. Verify `asset exists=YES`.
+2. **RETRY_SCAN_RESULT**: Shows `FOUND` or `NOT_FOUND`.
+   - If `NOT_FOUND`, it logs all tried assets and tolerances.
+3. **RETRY_WINDOW_SCREENSHOT_SAVED**: If Retry is not found for 60 seconds, the helper saves a screenshot of the window to `debug_snapshots\`.
+   - Inspect this image to see if the Retry button is actually visible and if its appearance has changed.
+
+If the button appearance has changed (e.g., due to a UI update), capture a new crop and save it as `assets\buttons\retry_button_alt.png`. The helper will automatically include it in future scans.

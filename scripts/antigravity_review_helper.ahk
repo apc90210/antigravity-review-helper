@@ -875,11 +875,7 @@ MainLoop()
         }
 
         ; Diagnostic logging for Retry scan
-        winpos := left "," top "," width "," height
-        search := left "," top "," right "," bottom
-        LogAction(hwnd, "RETRY_SCAN_BEGIN", 0, 0, "winpos=" winpos " search=" search)
-
-        if (ScanForButton(RETRY_IMG, left, top, right, bottom, &fX, &fY)) {
+        if (ScanForRetryButton(hwnd, left, top, right, bottom, &fX, &fY)) {
             if (DRY_RUN_MODE)
                 LogAction(hwnd, "DRY_RUN_RETRY_DETECTED", fX, fY, "Dry Run")
             if (DRY_RUN_MODE) {
@@ -890,7 +886,74 @@ MainLoop()
             if (config.RetryAuto)
                 DoClick(hwnd, fX, fY, "Retry")
             continue
+        } else {
+            ; Optional screenshot on NOT_FOUND (throttled)
+            now := A_TickCount
+            if (now - config.LastScanLogTime > 60000) { ; Once per minute per window
+                SaveWindowScreenshot(hwnd, "retry_not_found")
+                config.LastScanLogTime := now
+            }
         }
+    }
+}
+
+ScanForRetryButton(hwnd, left, top, right, bottom, &fX, &fY) {
+    global RETRY_IMG, ASSET_DIR
+    
+    ; Part 3 logging
+    title := SafeWinGetTitle(hwnd)
+    config := WindowConfigs.Has("" hwnd) ? WindowConfigs["" hwnd] : {RetryAuto: 0}
+    assetExists := FileExist(RETRY_IMG) ? "YES" : "NO"
+    width := right - left
+    height := bottom - top
+    winpos := left "," top "," width "," height
+    search := left "," top "," right "," bottom
+    
+    msg := "hwnd=" hwnd " title=" title " RetryAuto=" config.RetryAuto " DryRun=" (DRY_RUN_MODE ? "ON" : "OFF")
+    msg .= " winpos=" winpos " search=" search " asset=" RETRY_IMG " exists=" assetExists
+    LogAction(hwnd, "RETRY_SCAN_BEGIN", 0, 0, msg)
+
+    assets := [RETRY_IMG, ASSET_DIR "retry_button_alt.png", ASSET_DIR "retry_button_dark.png", ASSET_DIR "retry_button_light.png"]
+    tolerances := [50, 80, 100, 120]
+    
+    tried := ""
+    for img in assets {
+        if (!FileExist(img))
+            continue
+        for t in tolerances {
+            tried .= img "(t=" t ") "
+            if ScanForButton(img, left, top, right, bottom, &fX, &fY, t) {
+                LogAction(hwnd, "RETRY_SCAN_RESULT", fX, fY, "FOUND | asset=" img " tolerance=" t)
+                return true
+            }
+        }
+    }
+    
+    LogAction(hwnd, "RETRY_SCAN_RESULT", 0, 0, "NOT_FOUND | tried=" tried)
+    return false
+}
+
+SaveWindowScreenshot(hwnd, prefix) {
+    global SNAPSHOT_DIR
+    if (!GetWindowSearchRect(hwnd, &left, &top, &right, &bottom, &w, &h))
+        return
+    
+    timestamp := FormatTime(, "yyyyMMdd_HHmmss")
+    filename := SNAPSHOT_DIR "\" prefix "_" timestamp "_" hwnd ".png"
+    
+    psScript := 'Add-Type -AssemblyName System.Windows.Forms, System.Drawing; '
+    psScript .= '$bmp = New-Object System.Drawing.Bitmap(' w ', ' h '); '
+    psScript .= '$g = [System.Drawing.Graphics]::FromImage($bmp); '
+    psScript .= '$g.CopyFromScreen(' left ', ' top ', 0, 0, $bmp.Size); '
+    psScript .= '$bmp.Save(\"' filename '\", [System.Drawing.Imaging.ImageFormat]::Png); '
+    psScript .= '$bmp.Dispose(); $g.Dispose();'
+    
+    try {
+        fullCmd := 'powershell -NoProfile -Command "' psScript '"'
+        RunWait(fullCmd, , "Hide")
+        LogAction(hwnd, "RETRY_WINDOW_SCREENSHOT_SAVED", 0, 0, filename)
+    } catch {
+        LogAction(hwnd, "SCREENSHOT_FAILED", 0, 0, filename)
     }
 }
 
