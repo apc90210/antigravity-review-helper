@@ -29,8 +29,8 @@ This document outlines the steps for manually validating the Antigravity Review 
 5. Check the **Live Event Log** panel in the GUI. You should see a `DRY_RUN_RETRY_DETECTED` or `DRY_RUN_CLICK_BLOCKED` entry.
    - Look for `WINDOW_CONFIG_RUNTIME_STATE` or `MAINLOOP_CONFIG_STATE` entries to verify the helper is using the correct flags (e.g., `Retry=1`).
 6. Verify the **Retry Detected** counter has incremented.
-7. If "Retry Auto" was ON, verify the **Blocked by Dry Run** counter has incremented (since the helper attempted to click but was blocked by safety).
-8. Check `logs\antigravity_review_helper.log` for a permanent record.
+7. If "Retry Auto" was ON, verify the **Blocked by Dry Run** counter has incremented.
+8. Check `logs\antigravity_review_helper.log`. You should see `RETRY_SCAN_BEGIN`, `RETRY_SCAN_RESULT` (with tolerance/asset info), and `DRY_RUN_RETRY_DETECTED`.
 9. Verify that **NO REAL CLICK** occurred.
 
 ### 4. Live Testing
@@ -76,6 +76,12 @@ If the button is visible in Antigravity but not logged in the helper:
 2. Wait for a detection entry in the log while monitoring is active.
 3. Ensure the window is not minimized or partially obscured.
 4. If detection fails consistently, recapture `accept_button.png` from your screen at 100% scale and replace the file in `assets/buttons/`.
+
+### "Retry" visible but not detected
+1. Check `RETRY_SCAN_BEGIN` and `RETRY_SCAN_RESULT` in the log.
+2. If `NOT_FOUND`, the helper tried multiple tolerances (50 and 100) and still failed.
+3. Recapture `assets\buttons\retry_button.png` or provide alternates like `retry_button_alt.png`.
+4. Ensure your screen scaling is 100%.
 
 ### Manual Testing Recommendations
 - **First Live Test**: It is recommended to test **Retry Auto** as your first live action.

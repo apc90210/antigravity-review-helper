@@ -20,7 +20,7 @@ If the helper detects an "Enable Overages" button or a usage limit warning:
 - When you switch between project windows in the list, the helper restores the saved checkbox choices for that specific window.
 - **Enabled**: Must be checked for the helper to monitor the window.
 - **Always On**: Monitor even if the status is not "Running".
-- **Retry Auto**: Enable to auto-click "Retry".
+- **Retry Auto**: Enable to auto-click "Retry". The helper uses a robust multi-tolerance scan (50 and 100) and supports alternate assets (`retry_button_alt.png`, etc.).
 - **Copy Debug Info Auto**: Enable to allow auto-clicking "Copy debug info" during Retry events (OFF by default).
 - **Limits Alert Monitor**: Enable to scan for usage limits (ON by default).
 - **Accept All Auto**: Dangerous mode, requires confirmation.
@@ -65,4 +65,5 @@ A visible scrolling log that shows the most recent 500 events:
 3. **Check Action Flags**: Verify the specific action flag (e.g., `Retry=1` or `AcceptAuto=1`) is set to 1 in the log.
 4. **Check Action Scan Begin**: If `ACTION_SCAN_BEGIN` appears but no detection follows, recapture the button assets or verify the target window is fully visible and not obstructed.
 5. **Check Logic Gates**: If no `ACTION_SCAN_BEGIN` appears, the helper's internal safety gates (like `AlertActive` or `StaleHWND`) are blocking the scan. Check for `MAINLOOP_SKIP_REASON` in the log for details.
-6. **Limits Alert**: If a **LIMITS** popup is open or was not properly cleared, monitoring is paused for that window. Click **OK** on the red popup.
+6. **Retry Detection**: If Retry is not working, look for `RETRY_SCAN_BEGIN` and `RETRY_SCAN_RESULT`. A 2-second cooldown applies after a Retry click to prevent double-clicks.
+7. **Limits Alert**: If a **LIMITS** popup is open or was not properly cleared, monitoring is paused for that window. Click **OK** on the red popup.

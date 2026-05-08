@@ -27,6 +27,15 @@ The helper uses standardized assets with fallbacks:
 - **Manual Delegation**: Real Antigravity automation tests are performed manually by the user to ensure safety.
 - **Dry Run**: `DRY_RUN_MODE` is ON by default and must be verified before live testing.
 
+### Retry Troubleshooting
+If Retry does not work:
+1. Check `WINDOW_CONFIG_RUNTIME_STATE` in logs has `RetryAuto=1`.
+2. Check `RETRY_SCAN_BEGIN` appears in logs (rate-limited).
+3. Check `RETRY_SCAN_RESULT`.
+4. If `NOT_FOUND` while visible, recapture `assets\buttons\retry_button.png`.
+5. If `FOUND` in Dry Run but no live click, check Dry Run OFF and `CLICKED_RETRY` / cooldown logs.
+6. Ensure the Retry button is not obscured by another window.
+
 ## Current Distribution Mode
 
 > **Official build provided in `dist_test/`.**

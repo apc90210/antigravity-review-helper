@@ -336,13 +336,13 @@ IncrementCounter(eventName) {
         counter := "LimitsPopupOpened"
     
     ; Blocked/Safety Mappings
-    else if (InStr(eventName, "START_BLOCKED"))
+    else if (InStr(eventName, "START_BLOCKED") or InStr(eventName, "RETRY_SCAN_BLOCKED"))
         counter := "StartBlocked"
     else if (InStr(eventName, "TARGET_WINDOW_GONE"))
         counter := "TargetWindowGone"
     else if (InStr(eventName, "SKIPPED_STALE_WINDOW") or InStr(eventName, "STALE_WINDOW") or InStr(eventName, "STALE_HWND"))
         counter := "StaleWindowSkipped"
-    else if (InStr(eventName, "COOLDOWN_SKIP"))
+    else if (InStr(eventName, "COOLDOWN_SKIP") or InStr(eventName, "RETRY_COOLDOWN_SKIP"))
         counter := "CooldownSkipped"
     
     ; Specific Dry Run Blocked mapping (Defensive check)
@@ -974,22 +974,84 @@ MainLoop()
             continue
         }
 
-        if (ScanForButton(RETRY_IMG, x, y, x+w, y+h, &fX, &fY)) {
-            LogAction(hwnd, "ACTION_SCAN_RESULT", fX, fY, "RETRY_FOUND")
-            if (DRY_RUN_MODE)
-                LogAction(hwnd, "DRY_RUN_RETRY_DETECTED", fX, fY, "Dry Run")
-            
-            if (DRY_RUN_MODE) {
-                if (ScanForButton(COPY_DEBUG_IMG, x, y, x+w, y+h, &cX, &cY))
-                    LogAction(hwnd, "DRY_RUN_COPY_DEBUG_INFO_DETECTED", cX, cY, "Dry Run")
-            } else if (config.CopyDebugAuto)
-                CaptureDebugForWindow(hwnd, "AUTO")
-            
-            if (config.RetryAuto)
-                DoClick(hwnd, fX, fY, "Retry")
-            continue
+        ; --- Retry Chain ---
+        if (!config.RetryAuto) {
+             ; Only log once in a while if RetryAuto is off but window is running
+             if (now - config.LastScanLogTime > 30000)
+                 LogAction(hwnd, "RETRY_SCAN_BLOCKED", 0, 0, "RetryAuto=0")
+        } else {
+            if (ScanForRetryButton(hwnd, &fX, &fY)) {
+                LogAction(hwnd, "ACTION_SCAN_RESULT", fX, fY, "RETRY_FOUND")
+                
+                if (DRY_RUN_MODE) {
+                    LogAction(hwnd, "DRY_RUN_RETRY_DETECTED", fX, fY, "Dry Run")
+                    if (ScanForButton(COPY_DEBUG_IMG, x, y, x+w, y+h, &cX, &cY))
+                        LogAction(hwnd, "DRY_RUN_COPY_DEBUG_INFO_DETECTED", cX, cY, "Dry Run")
+                } else {
+                    if (config.CopyDebugAuto)
+                        CaptureDebugForWindow(hwnd, "AUTO")
+                    
+                    ; Live click path through DoClick
+                    DoClick(hwnd, fX, fY, "Retry")
+                }
+                continue
+            }
         }
     }
+}
+
+ScanForRetryButton(hwnd, &fX, &fY) {
+    global RETRY_IMG, ASSET_DIR, DRY_RUN_MODE, WindowConfigs
+    
+    if (!FileExist(RETRY_IMG)) {
+        LogAction(hwnd, "RETRY_ASSET_MISSING", 0, 0, RETRY_IMG)
+        return false
+    }
+
+    if (!SafeWinGetPos(hwnd, &x, &y, &w, &h)) {
+         LogAction(hwnd, "RETRY_SCAN_BLOCKED", 0, 0, "StaleWindow")
+         return false
+    }
+
+    config := WindowConfigs["" hwnd]
+    
+    ; Rate-limited diagnostic: RETRY_SCAN_BEGIN
+    now := A_TickCount
+    if (now - config.LastScanLogTime > 5000) {
+        stateNote := "rect=" x "," y "," w "," h " asset=" RETRY_IMG " Dry=" (DRY_RUN_MODE?1:0) " RetryAuto=" (config.RetryAuto?1:0)
+        LogAction(hwnd, "RETRY_SCAN_BEGIN", 0, 0, stateNote)
+    }
+
+    ; 1. Try standard tolerance
+    tolerance := 50
+    if (ScanForButton(RETRY_IMG, x, y, x+w, y+h, &fX, &fY, tolerance)) {
+        LogAction(hwnd, "RETRY_SCAN_RESULT", fX, fY, "FOUND | tolerance=" tolerance)
+        return true
+    }
+
+    ; 2. Try higher tolerance
+    tolerance := 100
+    if (ScanForButton(RETRY_IMG, x, y, x+w, y+h, &fX, &fY, tolerance)) {
+        LogAction(hwnd, "RETRY_SCAN_RESULT", fX, fY, "FOUND | tolerance=" tolerance)
+        return true
+    }
+
+    ; 3. Optional alternates
+    alts := ["retry_button_alt.png", "retry_button_dark.png", "retry_button_light.png"]
+    for alt in alts {
+        altPath := ASSET_DIR alt
+        if (FileExist(altPath)) {
+            if (ScanForButton(altPath, x, y, x+w, y+h, &fX, &fY, 100)) {
+                LogAction(hwnd, "RETRY_SCAN_RESULT", fX, fY, "FOUND | tolerance=100 | asset=" alt)
+                return true
+            }
+        }
+    }
+
+    if (now - config.LastScanLogTime > 5000) {
+        LogAction(hwnd, "RETRY_SCAN_RESULT", 0, 0, "NOT_FOUND | checked tolerance 50, 100 and alts")
+    }
+    return false
 }
 
 ScanForButton(imgPath, x1, y1, x2, y2, &fX, &fY, tolerance := 50) {
@@ -1006,13 +1068,34 @@ ScanForButton(imgPath, x1, y1, x2, y2, &fX, &fY, tolerance := 50) {
 }
 
 DoClick(hwnd, clickX, clickY, type) {
+    global WindowConfigs
     if (DRY_RUN_MODE) {
         upperType := StrUpper(type)
         LogAction(hwnd, "DRY_RUN_CLICK_BLOCKED", clickX, clickY, "Type: " upperType)
         return
     }
+    
+    ; Cooldown check (2 seconds for Retry, can be expanded)
+    now := A_TickCount
+    config := WindowConfigs["" hwnd]
+    if (type = "Retry") {
+        if (config.HasProp("LastRetryClickTime") and now - config.LastRetryClickTime < 2000) {
+            LogAction(hwnd, "RETRY_COOLDOWN_SKIP", clickX, clickY, "Wait 2s")
+            return
+        }
+        config.LastRetryClickTime := now
+    }
+
     CoordMode "Mouse", "Screen"
     if (SafeWinExists(hwnd)) {
+        ; Final sanity check: is point inside window?
+        if (SafeWinGetPos(hwnd, &wx, &wy, &ww, &wh)) {
+            if (clickX < wx or clickX > wx+ww or clickY < wy or clickY > wy+wh) {
+                LogAction(hwnd, "CLICK_BLOCKED_OUTSIDE_WINDOW", clickX, clickY, type)
+                return
+            }
+        }
+
         Click(clickX, clickY)
         LogAction(hwnd, "CLICKED_" StrUpper(type), clickX, clickY, "Live")
     } else {
