@@ -94,16 +94,18 @@ if (SAFETY_CONFIRMATION_REQUIRED)
     }
 }
 
+; --- GUI STYLING ---
 MyGui := Gui("+Resize", "Antigravity Review Helper v0.2.2-overlay")
-MyGui.SetFont("s9", "Segoe UI")
+MyGui.BackColor := "1e1e1e"
+MyGui.SetFont("s9 cD4D4D4", "Segoe UI Semibold")
 
 ; Initialize Counters
 InitCounters()
 
 ; Window List (Left Side)
-MyGui.Add("Text", "x10 y10", "Detected Antigravity Project Windows:")
+MyGui.Add("Text", "x10 y10 c4EC9B0", "Detected Antigravity Project Windows:")
 ; HWND | Status | Project | Title
-global MainLV := MyGui.Add("ListView", "x10 y30 w550 h120", ["HWND", "Status", "Project", "Title"])
+global MainLV := MyGui.Add("ListView", "x10 y30 w550 h120 Background2D2D2D cD4D4D4 +Grid", ["HWND", "Status", "Project", "Title"])
 MainLV.ModifyCol(1, 70)
 MainLV.ModifyCol(2, 100)
 MainLV.ModifyCol(3, 160)
@@ -111,7 +113,7 @@ MainLV.ModifyCol(4, 200)
 MainLV.OnEvent("Click", OnLVClick)
 
 ; Event Counters (Right Side)
-MyGui.Add("GroupBox", "x570 y10 w410 h250", "Event Counters (Runtime Only)")
+MyGui.Add("GroupBox", "x570 y10 w410 h250 c4EC9B0", "Event Counters (Runtime Only)")
 yPos := 30
 AddCounterUI(MyGui, "TotalEvents", "Total Events:", 580, yPos)
 yPos += 20
@@ -142,30 +144,30 @@ btnResetCounters := MyGui.Add("Button", "x580 y225 w120", "Reset Counters")
 btnResetCounters.OnEvent("Click", (*) => ResetCounters())
 
 ; Configuration Pane
-MyGui.Add("GroupBox", "x10 y160 w550 h100", "Selected Window Configuration")
-chkEnabled := MyGui.Add("Checkbox", "x20 y180", "Enabled")
+MyGui.Add("GroupBox", "x10 y160 w550 h100 c4EC9B0", "Selected Window Configuration")
+global chkEnabled := MyGui.Add("Checkbox", "x20 y180", "Enabled")
 chkEnabled.OnEvent("Click", OnCheckboxClick)
-chkAlwaysOn := MyGui.Add("Checkbox", "x100 y180", "Always On")
+global chkAlwaysOn := MyGui.Add("Checkbox", "x100 y180", "Always On")
 chkAlwaysOn.OnEvent("Click", OnCheckboxClick)
-chkRetry := MyGui.Add("Checkbox", "x200 y180", "Retry Auto")
+global chkRetry := MyGui.Add("Checkbox", "x200 y180", "Retry Auto")
 chkRetry.OnEvent("Click", OnCheckboxClick)
-chkContinue := MyGui.Add("Checkbox", "x300 y180", "Continue Auto")
+global chkContinue := MyGui.Add("Checkbox", "x300 y180", "Continue Auto")
 chkContinue.OnEvent("Click", OnCheckboxClick)
-chkAcceptManual := MyGui.Add("Checkbox", "x420 y180", "Accept Manual (Prompt)")
+global chkAcceptManual := MyGui.Add("Checkbox", "x420 y180", "Accept Manual (Prompt)")
 chkAcceptManual.OnEvent("Click", OnCheckboxClick)
-chkAcceptAuto := MyGui.Add("Checkbox", "x20 y205 cRed", "Accept All Auto (CAUTION)")
+global chkAcceptAuto := MyGui.Add("Checkbox", "x20 y205 cFF4444", "Accept All Auto (CAUTION)")
 chkAcceptAuto.OnEvent("Click", OnAcceptAutoClick)
 
-chkCopyDebugAuto := MyGui.Add("Checkbox", "x200 y205", "Copy Debug Info Auto")
+global chkCopyDebugAuto := MyGui.Add("Checkbox", "x200 y205", "Copy Debug Info Auto")
 chkCopyDebugAuto.OnEvent("Click", OnCheckboxClick)
-chkLimitsMonitor := MyGui.Add("Checkbox", "x420 y205 Checked", "Limits Alert Monitor")
+global chkLimitsMonitor := MyGui.Add("Checkbox", "x420 y205 Checked", "Limits Alert Monitor")
 chkLimitsMonitor.OnEvent("Click", OnCheckboxClick)
 
 ; Debug Viewer Panel (Left)
-MyGui.Add("GroupBox", "x10 y270 w550 h200", "Debug Viewer (Sanitized)")
-editDebugText := MyGui.Add("Edit", "x20 y290 w530 h120 ReadOnly vDebugText", "")
-txtCaptureStatus := MyGui.Add("Text", "x20 y420 w200", "Last Detection: None")
-txtRedactionStatus := MyGui.Add("Text", "x250 y420 w280", "Redaction Status: Idle")
+MyGui.Add("GroupBox", "x10 y270 w550 h200 c4EC9B0", "Debug Viewer (Sanitized)")
+global editDebugText := MyGui.Add("Edit", "x20 y290 w530 h120 ReadOnly vDebugText Background2D2D2D cD4D4D4", "")
+global txtCaptureStatus := MyGui.Add("Text", "x20 y420 w200", "Last Detection: None")
+global txtRedactionStatus := MyGui.Add("Text", "x250 y420 w280", "Redaction Status: Idle")
 btnRefreshDebug := MyGui.Add("Button", "x20 y440 w100", "Refresh Debug")
 btnRefreshDebug.OnEvent("Click", (*) => OnManualDebugCapture())
 btnCopyDebug := MyGui.Add("Button", "x130 y440 w100", "Copy Sanitized")
@@ -176,8 +178,8 @@ btnSaveSnapshot := MyGui.Add("Button", "x340 y440 w150", "Save Sanitized Snapsho
 btnSaveSnapshot.OnEvent("Click", OnSaveSnapshot)
 
 ; Live Event Log (Right)
-MyGui.Add("GroupBox", "x570 y270 w410 h270", "Live Event Log")
-global EventLogLV := MyGui.Add("ListView", "x580 y290 w390 h210", ["Time", "Project", "Event", "Mode", "Note"])
+MyGui.Add("GroupBox", "x570 y270 w410 h270 c4EC9B0", "Live Event Log")
+global EventLogLV := MyGui.Add("ListView", "x580 y290 w390 h210 Background2D2D2D cD4D4D4 +Grid", ["Time", "Project", "Event", "Mode", "Note"])
 EventLogLV.ModifyCol(1, 60)
 EventLogLV.ModifyCol(2, 80)
 EventLogLV.ModifyCol(3, 140)
@@ -194,10 +196,10 @@ MyGui.Add("Button", "x340 y480 w100", "Stop All").OnEvent("Click", StopAll)
 MyGui.Add("Button", "x450 y480 w100", "Clear Log").OnEvent("Click", OnClearLog)
 MyGui.Add("Button", "x560 y480 w50", "Exit").OnEvent("Click", (*) => ExitApp())
 
-chkDryRunGlobal := MyGui.Add("Checkbox", "x10 y505 Checked", "Global Dry Run Mode (Safety)")
+global chkDryRunGlobal := MyGui.Add("Checkbox", "x10 y505 Checked", "Global Dry Run Mode (Safety)")
 chkDryRunGlobal.OnEvent("Click", OnDryRunToggle)
 
-global txtGlobalStatus := MyGui.Add("Text", "x10 y525 w600 cBlue", "Helper: RUNNING | Dry Run: ON")
+global txtGlobalStatus := MyGui.Add("Text", "x10 y525 w600 c4EC9B0", "Helper: RUNNING | Dry Run: ON")
 MyGui.Add("Text", "x450 y525 w160 cGray Right", "Emergency: Ctrl+Alt+Esc")
 
 MyGui.Show("w1000 h550")
@@ -224,7 +226,7 @@ ExtractProjectName(title)
 
 SaveCurrentSelectionConfig() {
     global CurrentSelectedHwnd, WindowConfigs
-    global chkEnabled, chkAlwaysOn, chkRetry, chkContinue, chkCopyDebugAuto, chkAcceptManual, chkLimitsMonitor
+    global chkEnabled, chkAlwaysOn, chkRetry, chkContinue, chkCopyDebugAuto, chkAcceptManual, chkAcceptAuto, chkLimitsMonitor
 
     hwndStr := "" CurrentSelectedHwnd
     if (!CurrentSelectedHwnd or !WindowConfigs.Has(hwndStr))
@@ -237,6 +239,7 @@ SaveCurrentSelectionConfig() {
     config.ContinueAuto := chkContinue.Value
     config.CopyDebugAuto := chkCopyDebugAuto.Value
     config.AcceptManual := chkAcceptManual.Value
+    config.AcceptAuto := chkAcceptAuto.Value
     config.LimitsMonitor := chkLimitsMonitor.Value
 
     WindowConfigs[hwndStr] := config
@@ -246,7 +249,7 @@ SaveCurrentSelectionConfig() {
 
 LoadConfigIntoControls(hwnd) {
     global WindowConfigs, IsLoadingConfigIntoControls
-    global chkEnabled, chkAlwaysOn, chkRetry, chkContinue, chkCopyDebugAuto, chkAcceptManual, chkLimitsMonitor
+    global chkEnabled, chkAlwaysOn, chkRetry, chkContinue, chkCopyDebugAuto, chkAcceptManual, chkAcceptAuto, chkLimitsMonitor
     global txtCaptureStatus, txtRedactionStatus, editDebugText
 
     hwndStr := "" hwnd
@@ -340,9 +343,9 @@ IncrementCounter(eventName) {
         counter := "StartBlocked"
     else if (InStr(eventName, "TARGET_WINDOW_GONE"))
         counter := "TargetWindowGone"
-    else if (InStr(eventName, "SKIPPED_STALE_WINDOW") or InStr(eventName, "STALE_WINDOW") or InStr(eventName, "STALE_HWND"))
+    else if (InStr(eventName, "STALE_WINDOW") or InStr(eventName, "STALE_HWND"))
         counter := "StaleWindowSkipped"
-    else if (InStr(eventName, "COOLDOWN_SKIP") or InStr(eventName, "RETRY_COOLDOWN_SKIP"))
+    else if (InStr(eventName, "COOLDOWN_SKIP") or InStr(eventName, "RETRY_COOLDOWN_SKIP") or InStr(eventName, "ACCEPT_COOLDOWN_SKIP"))
         counter := "CooldownSkipped"
     
     ; Specific Dry Run Blocked mapping (Defensive check)
@@ -593,7 +596,7 @@ RefreshWindowList(*)
         if (isMatch)
         {
             hwndStr := "" hwnd
-            config := {Enabled: 0, AlwaysOn: 0, RetryAuto: 0, ContinueAuto: 0, AcceptManual: 1, AcceptAuto: 0, CopyDebugAuto: 0, LimitsMonitor: 1, Status: "Stopped", LastAcceptX: 0, LastAcceptY: 0, LastRetryTime: "", LastCaptureStatus: "Idle", CapturedText: "", AlertActive: false, LastLimitLog: 0, LastScanLogTime: 0}
+            config := {Enabled: 0, AlwaysOn: 0, RetryAuto: 0, ContinueAuto: 0, AcceptManual: 1, AcceptAuto: 0, CopyDebugAuto: 0, LimitsMonitor: 1, Status: "Stopped", LastAcceptX: 0, LastAcceptY: 0, LastRetryTime: "", LastCaptureStatus: "Idle", CapturedText: "", AlertActive: false, LastLimitLog: 0, LastScanLogTime: 0, LastAcceptClickTime: 0, LastRetryClickTime: 0}
             
             if (oldConfigs.Has(hwndStr)) {
                 config := oldConfigs[hwndStr]
@@ -952,25 +955,8 @@ MainLoop()
             ContinueAssetMissingLogged := true
         }
 
-        fX := 0, fY := 0, cX := 0, cY := 0, foundAccept := false
-        if (ScanForButton(ACCEPT_ALL_IMG, x, y, x+w, y+h, &fX, &fY, 80))
-            foundAccept := true
-        else if (ScanForButton(ACCEPT_FALLBACK_IMG, x, y, x+w, y+h, &fX, &fY, 80))
-            foundAccept := true
-
-        if (foundAccept) {
-            config.LastAcceptX := fX, config.LastAcceptY := fY
-            
-            if (config.AcceptAuto) {
-                LogAction(hwnd, "ACTION_SCAN_RESULT", fX, fY, "ACCEPT_ALL_AUTO")
-                if (DRY_RUN_MODE)
-                    LogAction(hwnd, "DRY_RUN_ACCEPT_ALL_DETECTED", fX, fY, "Dry Run")
-                DoClick(hwnd, fX, fY, "AcceptAllAuto")
-            } else if (config.AcceptManual) {
-                LogAction(hwnd, "ACTION_SCAN_RESULT", fX, fY, "ACCEPT_MANUAL")
-                if (DRY_RUN_MODE)
-                    LogAction(hwnd, "DRY_RUN_ACCEPT_MANUAL_DETECTED", fX, fY, "Dry Run")
-            }
+        fX := 0, fY := 0, cX := 0, cY := 0
+        if (HandleAcceptAction(hwnd, config)) {
             continue
         }
 
@@ -998,6 +984,79 @@ MainLoop()
             }
         }
     }
+}
+
+HandleAcceptAction(hwnd, config) {
+    global WindowConfigs, DRY_RUN_MODE
+    now := A_TickCount
+    fX := 0, fY := 0
+
+    ; Pre-scan diagnostics
+    if (!config.AcceptAuto and !config.AcceptManual) {
+        if (now - config.LastScanLogTime > 30000)
+            LogAction(hwnd, "ACCEPT_SCAN_BLOCKED", 0, 0, "AcceptAuto=0 AND AcceptManual=0")
+        return false
+    }
+
+    if (ScanForAcceptButton(hwnd, &fX, &fY)) {
+        config.LastAcceptX := fX, config.LastAcceptY := fY
+        
+        if (config.AcceptAuto) {
+            LogAction(hwnd, "ACTION_SCAN_RESULT", fX, fY, "ACCEPT_ALL_AUTO")
+            if (DRY_RUN_MODE) {
+                LogAction(hwnd, "DRY_RUN_ACCEPT_ALL_DETECTED", fX, fY, "Dry Run")
+                return true ; Stop chain in dry run after detection
+            }
+            DoClick(hwnd, fX, fY, "AcceptAllAuto")
+            return true
+        }
+        
+        if (config.AcceptManual) {
+            LogAction(hwnd, "ACTION_SCAN_RESULT", fX, fY, "ACCEPT_MANUAL")
+            if (DRY_RUN_MODE) {
+                LogAction(hwnd, "DRY_RUN_ACCEPT_MANUAL_DETECTED", fX, fY, "Dry Run")
+                return true
+            }
+            DoClick(hwnd, fX, fY, "AcceptManual")
+            return true
+        }
+    }
+    return false
+}
+
+ScanForAcceptButton(hwnd, &fX, &fY) {
+    global ACCEPT_ALL_IMG, ACCEPT_FALLBACK_IMG, WindowConfigs, DRY_RUN_MODE
+    
+    if (!SafeWinGetPos(hwnd, &x, &y, &w, &h)) {
+        LogAction(hwnd, "ACCEPT_SCAN_BLOCKED", 0, 0, "StaleWindow")
+        return false
+    }
+
+    config := WindowConfigs["" hwnd]
+    now := A_TickCount
+    
+    ; Rate-limited diagnostic: ACCEPT_SCAN_BEGIN
+    if (now - config.LastScanLogTime > 5000) {
+        stateNote := "rect=" x "," y "," w "," h " assets=" ACCEPT_ALL_IMG "," ACCEPT_FALLBACK_IMG " Dry=" (DRY_RUN_MODE?1:0) " AcceptAuto=" (config.AcceptAuto?1:0) " AcceptManual=" (config.AcceptManual?1:0)
+        LogAction(hwnd, "ACCEPT_SCAN_BEGIN", 0, 0, stateNote)
+    }
+
+    ; Tolerance 80 as currently used
+    tolerance := 80
+    if (ScanForButton(ACCEPT_ALL_IMG, x, y, x+w, y+h, &fX, &fY, tolerance)) {
+        LogAction(hwnd, "ACCEPT_SCAN_RESULT", fX, fY, "FOUND | asset=ACCEPT_ALL | tolerance=" tolerance)
+        return true
+    }
+    
+    if (ScanForButton(ACCEPT_FALLBACK_IMG, x, y, x+w, y+h, &fX, &fY, tolerance)) {
+        LogAction(hwnd, "ACCEPT_SCAN_RESULT", fX, fY, "FOUND | asset=ACCEPT_FALLBACK | tolerance=" tolerance)
+        return true
+    }
+
+    if (now - config.LastScanLogTime > 5000) {
+        LogAction(hwnd, "ACCEPT_SCAN_RESULT", 0, 0, "NOT_FOUND")
+    }
+    return false
 }
 
 ScanForRetryButton(hwnd, &fX, &fY) {
@@ -1068,7 +1127,7 @@ ScanForButton(imgPath, x1, y1, x2, y2, &fX, &fY, tolerance := 50) {
 }
 
 DoClick(hwnd, clickX, clickY, type) {
-    global WindowConfigs
+    global WindowConfigs, DRY_RUN_MODE
     if (DRY_RUN_MODE) {
         upperType := StrUpper(type)
         LogAction(hwnd, "DRY_RUN_CLICK_BLOCKED", clickX, clickY, "Type: " upperType)
@@ -1084,6 +1143,13 @@ DoClick(hwnd, clickX, clickY, type) {
             return
         }
         config.LastRetryClickTime := now
+    }
+    if (InStr(type, "Accept")) {
+        if (config.HasProp("LastAcceptClickTime") and now - config.LastAcceptClickTime < 10000) {
+            LogAction(hwnd, "ACCEPT_COOLDOWN_SKIP", clickX, clickY, "Wait 10s")
+            return
+        }
+        config.LastAcceptClickTime := now
     }
 
     CoordMode "Mouse", "Screen"
