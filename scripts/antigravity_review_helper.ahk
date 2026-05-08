@@ -9,6 +9,7 @@ global DRY_RUN_MODE := true
 global IS_PAUSED := false
 global SAFETY_CONFIRMATION_REQUIRED := true
 global SINGLE_ACTIVE_TARGET_MODE := true
+global GLOBAL_MONITORING_ACTIVE := false
 
 ; Global state
 global WindowConfigs := Map() ; hwnd -> Object
@@ -538,6 +539,7 @@ UpdateStatus(newStatus)
         config := WindowConfigs[hwndStr]
         
         if (newStatus = "Running") {
+            global GLOBAL_MONITORING_ACTIVE := true
             if (SINGLE_ACTIVE_TARGET_MODE) {
                 stoppedOthers := StopAllConfigsExcept(hwnd)
                 if (stoppedOthers > 0) {
@@ -547,6 +549,19 @@ UpdateStatus(newStatus)
             }
         } else if (newStatus = "Stopped") {
             config.AlwaysOn := false ; Stop background scanning if explicitly stopped
+            
+            ; Check if any other windows are still running/alwayson
+            anyActive := false
+            for h, cfg in WindowConfigs {
+                if (h != hwndStr and (cfg.Status = "Running" or cfg.AlwaysOn)) {
+                    anyActive := true
+                    break
+                }
+            }
+            if (!anyActive) {
+                global GLOBAL_MONITORING_ACTIVE := false
+                LogAction(0, "GLOBAL_MONITORING_PAUSED", 0, 0, "")
+            }
             LogAction(hwnd, "STOP_SELECTED_APPLIED", 0, 0, "")
         }
 
@@ -587,6 +602,8 @@ StopAll(*)
         MainLV.Modify(A_Index, , , "Stopped")
         
     LogAction(0, "STOP_ALL_APPLIED", 0, 0, "Count: " stoppedCount)
+    global GLOBAL_MONITORING_ACTIVE := false
+    LogAction(0, "GLOBAL_MONITORING_PAUSED", 0, 0, "")
     
     ; Refresh controls for current selection
     if (CurrentSelectedHwnd)
@@ -934,7 +951,7 @@ SetTimer(MainLoop, 1000)
 
 MainLoop()
 {
-    if (IS_PAUSED)
+    if (IS_PAUSED or !GLOBAL_MONITORING_ACTIVE)
         return
     for hwndStr, config in WindowConfigs
     {
