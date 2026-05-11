@@ -898,7 +898,7 @@ MainLoop()
         search := left "," top "," right "," bottom
         LogAction(hwnd, "RETRY_SCAN_BEGIN", 0, 0, "winpos=" winpos " search=" search)
 
-        if (ScanForButton(RETRY_IMG, left, top, right, bottom, &fX, &fY)) {
+        if (ScanForButton(RETRY_IMG, left, top, right, bottom, &fX, &fY, 80)) {
             if (DRY_RUN_MODE)
                 LogAction(hwnd, "DRY_RUN_RETRY_DETECTED", fX, fY, "Dry Run")
             if (DRY_RUN_MODE) {
