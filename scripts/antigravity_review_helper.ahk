@@ -242,15 +242,29 @@ AddCounterUI(guiObj, name, label, x, y) {
 
 IncrementCounter(eventName) {
     global EventCounters, CounterControls, DRY_RUN_MODE
-    
-    ; 1. Total Events always increments
+
+    ; Noise events — do NOT increment TotalEvents or any counter
+    static noiseEvents := ["REFRESH_WINDOW_LIST", "STATUS_CHANGED", "STOP_ALL_COMMAND",
+        "COUNTERS_RESET", "DR_LIVE_DANGER", "DR_SAFETY_RESTORED",
+        "ACCEPT_SCAN_BEGIN", "RETRY_SCAN_BEGIN", "COPY_DEBUG_SCAN_BEGIN",
+        "CONTINUE_ASSET_MISSING", "DEBUG_CLEARED", "DEBUG_SNAPSHOT_SAVED",
+        "DEBUG_COPY_BUTTON_NOT_FOUND", "ACCEPT_ALL_CONFIRMATION_CANCELLED",
+        "ACCEPT_ALL_CONFIRMATION_ACCEPTED", "ACCEPT_ALL_AUTO_DISABLED",
+        "ACCEPT_LIVE_COOLDOWN_SKIP", "RETRY_LIVE_COOLDOWN_SKIP",
+        "LIMIT_POPUP_CLOSED", "SCRIPT_START"]
+    for noise in noiseEvents {
+        if (eventName = noise)
+            return
+    }
+
+    ; 1. Total Events increments for real events only
     EventCounters["TotalEvents"] += 1
     if (CounterControls.Has("TotalEvents"))
         CounterControls["TotalEvents"].Value := EventCounters["TotalEvents"]
 
     ; 2. Primary Mapping Chain
     counter := ""
-    
+
     ; Detection Mappings
     if (InStr(eventName, "RETRY_DETECTED"))
         counter := "RetryDetected"
@@ -262,7 +276,7 @@ IncrementCounter(eventName) {
         counter := "ContinueDetected"
     else if (InStr(eventName, "LIMIT_WARNING_DETECTED") or InStr(eventName, "ENABLE_OVERAGES_DETECTED"))
         counter := "LimitsDetected"
-    
+
     ; Click/Action Mappings
     else if (InStr(eventName, "CLICKED_RETRY"))
         counter := "RetryClicked"
@@ -274,7 +288,7 @@ IncrementCounter(eventName) {
         counter := "ContinueClicked"
     else if (InStr(eventName, "LIMIT_POPUP_OPENED"))
         counter := "LimitsPopupOpened"
-    
+
     ; Blocked/Safety Mappings
     else if (InStr(eventName, "START_BLOCKED"))
         counter := "StartBlocked"
@@ -284,15 +298,10 @@ IncrementCounter(eventName) {
         counter := "StaleWindowSkipped"
     else if (InStr(eventName, "COOLDOWN_SKIP"))
         counter := "CooldownSkipped"
-    
-    ; Specific Dry Run Blocked mapping (Defensive check)
-    if (DRY_RUN_MODE) {
-        if (InStr(eventName, "DRY_RUN_CLICK_BLOCKED") or InStr(eventName, "CLICK_BLOCKED_DRY_RUN")) {
-            counter := "DryRunBlocked"
-        }
-    }
+    else if (InStr(eventName, "DRY_RUN_CLICK_BLOCKED") or InStr(eventName, "CLICK_BLOCKED_DRY_RUN"))
+        counter := "DryRunBlocked"
 
-    ; Increment if we found a valid mapping
+    ; Increment specific counter if mapped
     if (counter != "" and EventCounters.Has(counter)) {
         EventCounters[counter] += 1
         if (CounterControls.Has(counter))
@@ -824,17 +833,16 @@ MainLoop()
     for hwndStr, config in WindowConfigs
     {
         hwnd := Number(hwndStr)
-        left := 0, top := 0, right := 0, bottom := 0, width := 0, height := 0, fX := 0, fY := 0, cX := 0, cY := 0
-        ; Hardened gate: Only scan if Status is Running AND Enabled is true.
-        ; AlwaysOn logic is restricted to Running status in this fix to prevent idle scan logs.
-        if (config.Status != "Running" or !config.Enabled)
+        ; Gate: scan only if Status=Running AND (Enabled OR AlwaysOn)
+        if (config.Status != "Running")
             continue
-        
+        if (!config.Enabled and !config.AlwaysOn)
+            continue
+
         if (!SafeWinExists(hwnd)) {
             config.Status := "Stopped"
             config.Enabled := 0
             LogAction(hwnd, "TARGET_WINDOW_GONE", 0, 0, "")
-            ; Attempt to find row in LV to update status
             Loop MainLV.GetCount() {
                 if (MainLV.GetText(A_Index, 1) = hwndStr) {
                     MainLV.Modify(A_Index, , , "Stopped")
@@ -846,77 +854,98 @@ MainLoop()
 
         if (SafeWinGetMinMax(hwnd) = -1)
             continue
-        
+
         if (config.AlertActive)
             continue
-        
-        ; Double check project name
+
         title := SafeWinGetTitle(hwnd)
         if (ExtractProjectName(title) = "SELF - DO NOT USE")
             continue
 
+        ; === PRIORITY 1: Limits ===
         if (ScanForLimits(hwnd))
             continue
-            
+
         if (!GetWindowSearchRect(hwnd, &left, &top, &right, &bottom, &width, &height))
             continue
-        
-        global ContinueAssetMissingLogged
-        if (!ContinueAssetMissingLogged and !FileExist(CONTINUE_IMG)) {
-            LogAction(hwnd, "CONTINUE_ASSET_MISSING", 0, 0, "MISSING_OK")
-            ContinueAssetMissingLogged := true
-        }
 
-        fX := 0, fY := 0, cX := 0, cY := 0, foundAccept := false
-        if (config.AcceptManual or config.AcceptAuto) {
-            ; Diagnostic logging for Accept scan
-            winpos := left "," top "," width "," height
-            search := left "," top "," right "," bottom
-            LogAction(hwnd, "ACCEPT_SCAN_BEGIN", 0, 0, "winpos=" winpos " search=" search)
 
-            if (ScanForButton(ACCEPT_ALL_IMG, left, top, right, bottom, &fX, &fY, 80))
-                foundAccept := true
-            else if (ScanForButton(ACCEPT_FALLBACK_IMG, left, top, right, bottom, &fX, &fY, 80))
-                foundAccept := true
-        }
+        fX := 0, fY := 0
 
-        if (foundAccept) {
-            config.LastAcceptX := fX, config.LastAcceptY := fY
-            eventName := (config.AcceptAuto ? "ACCEPT_ALL_DETECTED" : "ACCEPT_MANUAL_DETECTED")
-            
-            if (DRY_RUN_MODE)
-                LogAction(hwnd, "DRY_RUN_" eventName, fX, fY, "Dry Run")
-            else {
-                LogAction(hwnd, eventName, fX, fY, "Detected")
-                if (config.AcceptAuto) {
+        ; === PRIORITY 2: Retry ===
+        if (ScanForButton(RETRY_IMG, left, top, right, bottom, &fX, &fY, 80)) {
+            if (DRY_RUN_MODE) {
+                LogAction(hwnd, "DRY_RUN_RETRY_DETECTED", fX, fY, "Dry Run")
+            } else {
+                LogAction(hwnd, "RETRY_DETECTED", fX, fY, "Live")
+                if (config.RetryAuto) {
                     now := A_TickCount
-                    if (now - config.LastAcceptClickTime > 10000) {
-                        DoClick(hwnd, fX, fY, "ACCEPT_ALL_AUTO")
-                        config.LastAcceptClickTime := now
+                    if (now - config.LastRetryClickTime > 10000) {
+                        DoClick(hwnd, fX, fY, "RETRY")
+                        config.LastRetryClickTime := now
                     } else {
-                        LogAction(hwnd, "ACCEPT_LIVE_COOLDOWN_SKIP", 0, 0, "Cooldown")
+                        LogAction(hwnd, "RETRY_LIVE_COOLDOWN_SKIP", 0, 0, "Cooldown")
                     }
+                }
+            }
+            ; In Dry Run also check Copy Debug as a companion scan
+            if (DRY_RUN_MODE and config.CopyDebugAuto) {
+                cX := 0, cY := 0
+                if (ScanForButton(COPY_DEBUG_IMG, left, top, right, bottom, &cX, &cY)) {
+                    LogAction(hwnd, "DRY_RUN_COPY_DEBUG_INFO_DETECTED", cX, cY, "Dry Run")
                 }
             }
             continue
         }
 
-        ; Diagnostic logging for Retry scan
-        winpos := left "," top "," width "," height
-        search := left "," top "," right "," bottom
-        LogAction(hwnd, "RETRY_SCAN_BEGIN", 0, 0, "winpos=" winpos " search=" search)
+        ; === PRIORITY 3: Accept ===
+        if (config.AcceptManual or config.AcceptAuto) {
+            if (ScanForButton(ACCEPT_ALL_IMG, left, top, right, bottom, &fX, &fY, 80)
+                or ScanForButton(ACCEPT_FALLBACK_IMG, left, top, right, bottom, &fX, &fY, 80)) {
+                config.LastAcceptX := fX
+                config.LastAcceptY := fY
+                if (config.AcceptAuto) {
+                    if (DRY_RUN_MODE) {
+                        LogAction(hwnd, "DRY_RUN_ACCEPT_ALL_DETECTED", fX, fY, "Dry Run")
+                    } else {
+                        LogAction(hwnd, "ACCEPT_ALL_DETECTED", fX, fY, "Live")
+                        now := A_TickCount
+                        if (now - config.LastAcceptClickTime > 10000) {
+                            DoClick(hwnd, fX, fY, "ACCEPT_ALL_AUTO")
+                            config.LastAcceptClickTime := now
+                        } else {
+                            LogAction(hwnd, "ACCEPT_LIVE_COOLDOWN_SKIP", 0, 0, "Cooldown")
+                        }
+                    }
+                } else {
+                    ; AcceptManual: detect and log; live click requires user to confirm per-session
+                    if (DRY_RUN_MODE) {
+                        LogAction(hwnd, "DRY_RUN_ACCEPT_MANUAL_DETECTED", fX, fY, "Dry Run")
+                    } else {
+                        LogAction(hwnd, "ACCEPT_MANUAL_DETECTED", fX, fY, "Live")
+                        now := A_TickCount
+                        if (now - config.LastAcceptClickTime > 10000) {
+                            DoClick(hwnd, fX, fY, "ACCEPT_MANUAL")
+                            config.LastAcceptClickTime := now
+                        } else {
+                            LogAction(hwnd, "ACCEPT_LIVE_COOLDOWN_SKIP", 0, 0, "Cooldown")
+                        }
+                    }
+                }
+                continue
+            }
+        }
 
-        if (ScanForButton(RETRY_IMG, left, top, right, bottom, &fX, &fY, 80)) {
-            if (DRY_RUN_MODE)
-                LogAction(hwnd, "DRY_RUN_RETRY_DETECTED", fX, fY, "Dry Run")
-            if (DRY_RUN_MODE) {
-                if (ScanForButton(COPY_DEBUG_IMG, left, top, right, bottom, &cX, &cY))
-                    LogAction(hwnd, "DRY_RUN_COPY_DEBUG_INFO_DETECTED", cX, cY, "Dry Run")
-            } else if (config.CopyDebugAuto)
-                CaptureDebugForWindow(hwnd, "AUTO")
-            if (config.RetryAuto)
-                DoClick(hwnd, fX, fY, "Retry")
-            continue
+        ; === PRIORITY 4: Copy Debug Info ===
+        if (config.CopyDebugAuto) {
+            if (ScanForButton(COPY_DEBUG_IMG, left, top, right, bottom, &fX, &fY)) {
+                if (DRY_RUN_MODE) {
+                    LogAction(hwnd, "DRY_RUN_COPY_DEBUG_INFO_DETECTED", fX, fY, "Dry Run")
+                } else {
+                    CaptureDebugForWindow(hwnd, "AUTO")
+                }
+                continue
+            }
         }
     }
 }
