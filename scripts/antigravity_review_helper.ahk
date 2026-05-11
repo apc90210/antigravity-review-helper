@@ -416,13 +416,21 @@ OnCheckboxClick(ctrl, *)
         return
     config := WindowConfigs[hwnd]
     
-    if (ctrl = chkEnabled) config.Enabled := ctrl.Value
-    else if (ctrl = chkAlwaysOn) config.AlwaysOn := ctrl.Value
-    else if (ctrl = chkRetry) config.RetryAuto := ctrl.Value
-    else if (ctrl = chkContinue) config.ContinueAuto := ctrl.Value
-    else if (ctrl = chkAcceptManual) config.AcceptManual := ctrl.Value
-    else if (ctrl = chkCopyDebugAuto) config.CopyDebugAuto := ctrl.Value
-    else if (ctrl = chkLimitsMonitor) config.LimitsMonitor := ctrl.Value
+    if (ctrl = chkEnabled) {
+        config.Enabled := ctrl.Value
+    } else if (ctrl = chkAlwaysOn) {
+        config.AlwaysOn := ctrl.Value
+    } else if (ctrl = chkRetry) {
+        config.RetryAuto := ctrl.Value
+    } else if (ctrl = chkContinue) {
+        config.ContinueAuto := ctrl.Value
+    } else if (ctrl = chkAcceptManual) {
+        config.AcceptManual := ctrl.Value
+    } else if (ctrl = chkCopyDebugAuto) {
+        config.CopyDebugAuto := ctrl.Value
+    } else if (ctrl = chkLimitsMonitor) {
+        config.LimitsMonitor := ctrl.Value
+    }
 }
 
 OnAcceptAutoClick(ctrl, *)
