@@ -15,6 +15,7 @@ debug_snapshots/*.log
 *.msi
 dist/
 dist_test/
+release/
 
 # Scratch and dev-only files
 scratch/

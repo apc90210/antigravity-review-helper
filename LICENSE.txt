@@ -1,0 +1,21 @@
+Antigravity Review Helper
+Copyright (c) 2026 Paul Atan <greghous91@gmail.com>
+
+TESTING / EVALUATION LICENSE
+
+This software is provided for manual testing and evaluation purposes only.
+It is NOT intended for production use in its current form.
+
+Permissions:
+- You may run this software for personal manual testing.
+- You may inspect the source code for evaluation.
+
+Restrictions:
+- You may NOT redistribute this software or its binaries without permission.
+- You may NOT use this software in any automated production pipeline without explicit approval.
+- You may NOT disable Windows Defender or any security software to run this utility.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.
+THE AUTHOR SHALL NOT BE LIABLE FOR ANY DAMAGES ARISING FROM THE USE OF THIS SOFTWARE.
+
+Contact: greghous91@gmail.com
