@@ -2,7 +2,47 @@
 
 ---
 
-## v0.2.0-test-ready
+## v0.3.0-test — Manual Test Installer Release
+
+**Date:** 2026-05-11  
+**Author:** Paul Atan (`greghous91@gmail.com`)  
+**Distribution:** TEST EXE + Windows Installer (per-user, no admin)  
+**Platform:** Windows 10 / Windows 11  
+**Runtime:** AutoHotkey v2 (embedded in EXE via Ahk2Exe)  
+**Branch:** `recovery/stable-accept-coordinate-baseline`
+
+---
+
+### Overview
+
+Release **v0.3.0-test** packages the helper as a proper Windows installer for manual testing. Key changes:
+
+- **Retry button asset calibrated** — root cause of Retry detection failure was an asset mismatch. Fixed and committed.
+- **Version metadata added** — `APP_VERSION`, `APP_AUTHOR`, `APP_CONTACT` constants in source.
+- **About dialog** — new button shows version, author, contact, and safety notice.
+- **Ahk2Exe directives** — EXE file properties now include name, version, company, copyright.
+- **GUI title updated** — now shows `Antigravity Review Helper v0.3.0-test`.
+- **Windows Installer (Inno Setup)** — per-user install to `%LocalAppData%\Programs\Antigravity Review Helper`. No admin rights required.
+
+### Safety Defaults
+
+```
+DRY_RUN_MODE          = true   (ON by default)
+ACCEPT_ALL_AUTO       = false  (OFF by default)
+COPY_DEBUG_INFO_AUTO  = false  (OFF by default)
+SELF_EXCLUSION        = active
+LIVE_MODE             = requires explicit user confirmation
+```
+
+### Important
+
+- **Do NOT run Live mode until Dry Run passes.**
+- **Assets are packaged next to the EXE.** If buttons are not detected, verify `assets\` folder is present.
+- **Installer is for manual testing only.** Not a production release.
+
+---
+
+
 
 **Date:** 2026-05-07  
 **Distribution:** Source and optional TEST EXE package  

@@ -1,5 +1,20 @@
+;@Ahk2Exe-SetName Antigravity Review Helper
+;@Ahk2Exe-SetDescription Antigravity Review Helper
+;@Ahk2Exe-SetVersion 0.3.0.0
+;@Ahk2Exe-SetCompanyName Paul Atan
+;@Ahk2Exe-SetCopyright Copyright (c) 2026 Paul Atan
+;@Ahk2Exe-SetOrigFilename AntigravityReviewHelper.exe
 #Requires AutoHotkey v2.0
 #SingleInstance Force
+
+; ==============================================================================
+; VERSION & AUTHORSHIP
+; ==============================================================================
+global APP_NAME := "Antigravity Review Helper"
+global APP_VERSION := "0.3.0-test"
+global APP_AUTHOR := "Paul Atan"
+global APP_CONTACT := "greghous91@gmail.com"
+global APP_RELEASE_CHANNEL := "Manual Test Build"
 
 ; ==============================================================================
 ; CONFIGURATION & SAFETY SETTINGS
@@ -78,7 +93,7 @@ global AlertGuis := Map() ; hwnd -> Gui Object
 
 if (SAFETY_CONFIRMATION_REQUIRED)
 {
-    msg := "Antigravity Review Helper v4 (Harden Selection) Safety Briefing:`n`n"
+    msg := APP_NAME " v" APP_VERSION " Safety Briefing:`n`n"
     msg .= "- UI is English-only.`n"
     msg .= "- Helper never monitors its own windows.`n"
     msg .= "- User must explicitly select and START a project window.`n"
@@ -92,7 +107,7 @@ if (SAFETY_CONFIRMATION_REQUIRED)
     }
 }
 
-MyGui := Gui("+Resize", "Antigravity Review Helper v0.2.2-overlay")
+MyGui := Gui("+Resize", APP_NAME " v" APP_VERSION)
 MyGui.SetFont("s9", "Segoe UI")
 
 ; Initialize Counters
@@ -191,6 +206,8 @@ MyGui.Add("Button", "x230 y480 w100", "Stop Selected").OnEvent("Click", (*) => U
 MyGui.Add("Button", "x340 y480 w100", "Stop All").OnEvent("Click", StopAll)
 MyGui.Add("Button", "x450 y480 w100", "Clear Log").OnEvent("Click", OnClearLog)
 MyGui.Add("Button", "x560 y480 w50", "Exit").OnEvent("Click", (*) => ExitApp())
+btnAbout := MyGui.Add("Button", "x620 y480 w70", "About")
+btnAbout.OnEvent("Click", (*) => ShowAbout())
 
 chkDryRunGlobal := MyGui.Add("Checkbox", "x10 y505 Checked", "Global Dry Run Mode (Safety)")
 chkDryRunGlobal.OnEvent("Click", OnDryRunToggle)
@@ -205,6 +222,21 @@ RefreshWindowList()
 ; ==============================================================================
 ; GUI EVENTS & HELPERS
 ; ==============================================================================
+
+ShowAbout() {
+    global APP_NAME, APP_VERSION, APP_AUTHOR, APP_CONTACT, APP_RELEASE_CHANNEL
+    info := APP_NAME "`n"
+    info .= "Version: " APP_VERSION "`n"
+    info .= "Channel: " APP_RELEASE_CHANNEL "`n`n"
+    info .= "Author: " APP_AUTHOR "`n"
+    info .= "Contact: " APP_CONTACT "`n`n"
+    info .= "Purpose:`n"
+    info .= "Safe helper for monitoring selected Antigravity/Cursor windows`n"
+    info .= "and automating selected review actions.`n`n"
+    info .= "Safety:`n"
+    info .= "Dry Run is ON by default. Live clicks require explicit user confirmation."
+    MsgBox(info, "About " APP_NAME, "Iconi")
+}
 
 ExtractProjectName(title)
 {

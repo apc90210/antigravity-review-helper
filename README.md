@@ -1,7 +1,8 @@
-# Antigravity Review Helper v4
+# Antigravity Review Helper
 
-> **Current Status: `v0.2.2-overlay`**  
-> Run with AutoHotkey v2 · Verified TEST EXE build · `DRY_RUN_MODE` enabled by default · UI Overlay with Counters & Live Log
+> **Version: `v0.3.0-test`** | **Author: Paul Atan** | **Contact: [greghous91@gmail.com](mailto:greghous91@gmail.com)**  
+> Run with AutoHotkey v2 · Verified TEST EXE + Installer · `DRY_RUN_MODE` enabled by default · UI Overlay with Counters & Live Log
+
 
 A standalone Windows 10 desktop utility to assist with repetitive UI review actions in Antigravity, VS Code, and Cursor.
 
@@ -22,21 +23,25 @@ The helper uses standardized assets with fallbacks:
 - **Enable Overages / Limits**: `enable_overages_button.png` (Preferred) or `limit_warning.png` (Fallback).
 
 ## Manual Testing Status
-- **Version**: `v0.2.2-overlay`
-- **Release Strategy**: Source and optional TEST EXE package.
+- **Version**: `v0.3.0-test`
+- **Author**: Paul Atan (`greghous91@gmail.com`)
+- **Release Strategy**: Source + TEST EXE + Windows Installer.
 - **Manual Delegation**: Real Antigravity automation tests are performed manually by the user to ensure safety.
 - **Dry Run**: `DRY_RUN_MODE` is ON by default and must be verified before live testing.
+- **Live Mode**: Do NOT test Live mode until Dry Run passes all validation.
 
 ## Current Distribution Mode
 
-> **Official build provided in `dist_test/`.**
+> **Official test build provided in `release\AntigravityReviewHelper-v0.3.0-test\`.**
 
-The project is currently distributed as **source code** and must be run directly with AutoHotkey v2.
+This version is distributed as:
+- **TEST EXE** (`release\AntigravityReviewHelper-v0.3.0-test\AntigravityReviewHelper.exe`)
+- **Windows Installer** (`release\AntigravityReviewHelper-v0.3.0-test-Setup.exe`) — per-user install, no admin required
+- **Source code** for manual script execution with AutoHotkey v2
 
-- **TEST EXE is available** in the `dist_test/` folder for manual validation.
 - **Do not disable Windows Defender**. The build is verified to work with standard protection.
-- Ahk2Exe compilation was performed locally using a verified compiler.
-- **Keep `DRY_RUN_MODE = true`** until local dry-run behavior is fully validated on your machine.
+- Assets are bundled next to the EXE. If buttons are not detected, check `assets\` folder first.
+- **Keep `DRY_RUN_MODE = true`** until local dry-run behavior is fully validated.
 
 ### How to Run
 

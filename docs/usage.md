@@ -1,4 +1,5 @@
-# Usage Guide (v4)
+# Usage Guide — v0.3.0-test (Paul Atan · greghous91@gmail.com)
+
 
 ## Language Setting
 The entire Antigravity Review Helper application is in **English**.
