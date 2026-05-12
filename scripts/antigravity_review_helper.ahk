@@ -158,25 +158,21 @@ btnResetCounters.OnEvent("Click", (*) => ResetCounters())
 MyGui.Add("GroupBox", "x10 y160 w550 h100", "Selected Window Configuration")
 chkEnabled := MyGui.Add("Checkbox", "x20 y180", "Enabled")
 chkEnabled.OnEvent("Click", OnCheckboxClick)
-chkRetry := MyGui.Add("Checkbox", "x100 y180", "Retry Auto")
+chkAlwaysOn := MyGui.Add("Checkbox", "x100 y180", "Always On")
+chkAlwaysOn.OnEvent("Click", OnCheckboxClick)
+chkRetry := MyGui.Add("Checkbox", "x200 y180", "Retry Auto")
 chkRetry.OnEvent("Click", OnCheckboxClick)
-chkContinue := MyGui.Add("Checkbox", "x200 y180", "Continue Auto")
+chkContinue := MyGui.Add("Checkbox", "x300 y180", "Continue Auto")
 chkContinue.OnEvent("Click", OnCheckboxClick)
-chkAcceptManual := MyGui.Add("Checkbox", "x320 y180", "Accept Manual (Prompt)")
+chkAcceptManual := MyGui.Add("Checkbox", "x420 y180", "Accept Manual (Prompt)")
 chkAcceptManual.OnEvent("Click", OnCheckboxClick)
 chkAcceptAuto := MyGui.Add("Checkbox", "x20 y205 cRed", "Accept All Auto (CAUTION)")
 chkAcceptAuto.OnEvent("Click", OnAcceptAutoClick)
 
 chkCopyDebugAuto := MyGui.Add("Checkbox", "x200 y205", "Copy Debug Info Auto")
 chkCopyDebugAuto.OnEvent("Click", OnCheckboxClick)
-chkLimitsMonitor := MyGui.Add("Checkbox", "x360 y205 Checked", "Limits Alert Monitor")
+chkLimitsMonitor := MyGui.Add("Checkbox", "x420 y205 Checked", "Limits Alert Monitor")
 chkLimitsMonitor.OnEvent("Click", OnCheckboxClick)
-
-; Select All / Clear All — toggle action checkboxes only, do NOT start monitoring
-btnSelectAll := MyGui.Add("Button", "x20 y235 w90", "Select All")
-btnSelectAll.OnEvent("Click", (*) => SelectAllActionsForSelectedWindow())
-btnClearAll := MyGui.Add("Button", "x120 y235 w90", "Clear All")
-btnClearAll.OnEvent("Click", (*) => ClearAllActionsForSelectedWindow())
 
 ; Debug Viewer Panel (Left)
 MyGui.Add("GroupBox", "x10 y270 w550 h200", "Debug Viewer (Sanitized)")
@@ -439,6 +435,7 @@ OnLVClick(targetLV, RowNumber)
         return
     config := WindowConfigs[hwnd]
     chkEnabled.Value := config.Enabled
+    chkAlwaysOn.Value := config.AlwaysOn
     chkRetry.Value := config.RetryAuto
     chkContinue.Value := config.ContinueAuto
     chkAcceptManual.Value := config.AcceptManual
@@ -462,6 +459,8 @@ OnCheckboxClick(ctrl, *)
     
     if (ctrl = chkEnabled) {
         config.Enabled := ctrl.Value
+    } else if (ctrl = chkAlwaysOn) {
+        config.AlwaysOn := ctrl.Value
     } else if (ctrl = chkRetry) {
         config.RetryAuto := ctrl.Value
     } else if (ctrl = chkContinue) {
@@ -504,52 +503,6 @@ OnAcceptAutoClick(ctrl, *)
         config.AcceptAuto := 0
         LogAction(hwnd, "ACCEPT_ALL_AUTO_DISABLED", 0, 0, "")
     }
-}
-
-SelectAllActionsForSelectedWindow()
-{
-    RowNumber := MainLV.GetNext()
-    if (RowNumber = 0) {
-        LogAction(0, "SELECT_WINDOW_FIRST", 0, 0, "Select All requires a window to be selected")
-        return
-    }
-    hwnd := MainLV.GetText(RowNumber, 1)
-    if (!WindowConfigs.Has(hwnd))
-        return
-    config := WindowConfigs[hwnd]
-    config.RetryAuto    := 1
-    config.AcceptAuto   := 1
-    config.AcceptManual := 1
-    config.CopyDebugAuto := 1
-    config.LimitsMonitor := 1
-    chkRetry.Value        := 1
-    chkAcceptAuto.Value   := 1
-    chkAcceptManual.Value := 1
-    chkCopyDebugAuto.Value := 1
-    chkLimitsMonitor.Value := 1
-}
-
-ClearAllActionsForSelectedWindow()
-{
-    RowNumber := MainLV.GetNext()
-    if (RowNumber = 0) {
-        LogAction(0, "SELECT_WINDOW_FIRST", 0, 0, "Clear All requires a window to be selected")
-        return
-    }
-    hwnd := MainLV.GetText(RowNumber, 1)
-    if (!WindowConfigs.Has(hwnd))
-        return
-    config := WindowConfigs[hwnd]
-    config.RetryAuto    := 0
-    config.AcceptAuto   := 0
-    config.AcceptManual := 0
-    config.CopyDebugAuto := 0
-    config.LimitsMonitor := 0
-    chkRetry.Value        := 0
-    chkAcceptAuto.Value   := 0
-    chkAcceptManual.Value := 0
-    chkCopyDebugAuto.Value := 0
-    chkLimitsMonitor.Value := 0
 }
 
 UpdateStatus(newStatus)
@@ -644,7 +597,7 @@ RefreshWindowList(*)
         
         if (isMatch)
         {
-            config := {Enabled: 0, RetryAuto: 0, ContinueAuto: 0, AcceptManual: 1, AcceptAuto: 0, CopyDebugAuto: 0, LimitsMonitor: 1, Status: "Stopped", LastAcceptX: 0, LastAcceptY: 0, LastRetryTime: "", LastCaptureStatus: "Idle", CapturedText: "", AlertActive: false, LastLimitLog: 0, LastScanLogTime: 0, LastAcceptClickTime: 0, LastRetryClickTime: 0}
+            config := {Enabled: 0, AlwaysOn: 0, RetryAuto: 0, ContinueAuto: 0, AcceptManual: 1, AcceptAuto: 0, CopyDebugAuto: 0, LimitsMonitor: 1, Status: "Stopped", LastAcceptX: 0, LastAcceptY: 0, LastRetryTime: "", LastCaptureStatus: "Idle", CapturedText: "", AlertActive: false, LastLimitLog: 0, LastScanLogTime: 0, LastAcceptClickTime: 0, LastRetryClickTime: 0}
             if (oldConfigs.Has("" hwnd))
                 config := oldConfigs["" hwnd]
             
@@ -912,10 +865,10 @@ MainLoop()
     for hwndStr, config in WindowConfigs
     {
         hwnd := Number(hwndStr)
-        ; Gate: scan only if Status=Running AND Enabled
+        ; Gate: scan only if Status=Running AND (Enabled OR AlwaysOn)
         if (config.Status != "Running")
             continue
-        if (!config.Enabled)
+        if (!config.Enabled and !config.AlwaysOn)
             continue
 
         if (!SafeWinExists(hwnd)) {
@@ -951,13 +904,13 @@ MainLoop()
 
         fX := 0, fY := 0
 
-        ; === PRIORITY 2: Retry (only when RetryAuto is ON) ===
-        if (config.RetryAuto) {
-            if (ScanForButton(RETRY_IMG, left, top, right, bottom, &fX, &fY, 80)) {
-                if (DRY_RUN_MODE) {
-                    LogAction(hwnd, "DRY_RUN_RETRY_DETECTED", fX, fY, "Dry Run")
-                } else {
-                    LogAction(hwnd, "RETRY_DETECTED", fX, fY, "Live")
+        ; === PRIORITY 2: Retry ===
+        if (ScanForButton(RETRY_IMG, left, top, right, bottom, &fX, &fY, 80)) {
+            if (DRY_RUN_MODE) {
+                LogAction(hwnd, "DRY_RUN_RETRY_DETECTED", fX, fY, "Dry Run")
+            } else {
+                LogAction(hwnd, "RETRY_DETECTED", fX, fY, "Live")
+                if (config.RetryAuto) {
                     now := A_TickCount
                     if (now - config.LastRetryClickTime > 10000) {
                         DoClick(hwnd, fX, fY, "RETRY")
@@ -966,53 +919,56 @@ MainLoop()
                         LogAction(hwnd, "RETRY_LIVE_COOLDOWN_SKIP", 0, 0, "Cooldown")
                     }
                 }
-                continue
             }
+            ; In Dry Run also check Copy Debug as a companion scan
+            if (DRY_RUN_MODE and config.CopyDebugAuto) {
+                cX := 0, cY := 0
+                if (ScanForButton(COPY_DEBUG_IMG, left, top, right, bottom, &cX, &cY)) {
+                    LogAction(hwnd, "DRY_RUN_COPY_DEBUG_INFO_DETECTED", cX, cY, "Dry Run")
+                }
+            }
+            continue
         }
 
-        ; === PRIORITY 3: Accept All Auto (only when AcceptAuto is ON) ===
-        if (config.AcceptAuto) {
-            if (ScanForButton(ACCEPT_ALL_IMG, left, top, right, bottom, &fX, &fY, 80)) {
+        ; === PRIORITY 3: Accept ===
+        if (config.AcceptManual or config.AcceptAuto) {
+            if (ScanForButton(ACCEPT_ALL_IMG, left, top, right, bottom, &fX, &fY, 80)
+                or ScanForButton(ACCEPT_FALLBACK_IMG, left, top, right, bottom, &fX, &fY, 80)) {
                 config.LastAcceptX := fX
                 config.LastAcceptY := fY
-                if (DRY_RUN_MODE) {
-                    LogAction(hwnd, "DRY_RUN_ACCEPT_ALL_DETECTED", fX, fY, "Dry Run")
-                } else {
-                    LogAction(hwnd, "ACCEPT_ALL_DETECTED", fX, fY, "Live")
-                    now := A_TickCount
-                    if (now - config.LastAcceptClickTime > 10000) {
-                        DoClick(hwnd, fX, fY, "ACCEPT_ALL_AUTO")
-                        config.LastAcceptClickTime := now
+                if (config.AcceptAuto) {
+                    if (DRY_RUN_MODE) {
+                        LogAction(hwnd, "DRY_RUN_ACCEPT_ALL_DETECTED", fX, fY, "Dry Run")
                     } else {
-                        LogAction(hwnd, "ACCEPT_LIVE_COOLDOWN_SKIP", 0, 0, "Cooldown")
+                        LogAction(hwnd, "ACCEPT_ALL_DETECTED", fX, fY, "Live")
+                        now := A_TickCount
+                        if (now - config.LastAcceptClickTime > 10000) {
+                            DoClick(hwnd, fX, fY, "ACCEPT_ALL_AUTO")
+                            config.LastAcceptClickTime := now
+                        } else {
+                            LogAction(hwnd, "ACCEPT_LIVE_COOLDOWN_SKIP", 0, 0, "Cooldown")
+                        }
+                    }
+                } else {
+                    ; AcceptManual: detect and log; live click requires user to confirm per-session
+                    if (DRY_RUN_MODE) {
+                        LogAction(hwnd, "DRY_RUN_ACCEPT_MANUAL_DETECTED", fX, fY, "Dry Run")
+                    } else {
+                        LogAction(hwnd, "ACCEPT_MANUAL_DETECTED", fX, fY, "Live")
+                        now := A_TickCount
+                        if (now - config.LastAcceptClickTime > 10000) {
+                            DoClick(hwnd, fX, fY, "ACCEPT_MANUAL")
+                            config.LastAcceptClickTime := now
+                        } else {
+                            LogAction(hwnd, "ACCEPT_LIVE_COOLDOWN_SKIP", 0, 0, "Cooldown")
+                        }
                     }
                 }
                 continue
             }
         }
 
-        ; === PRIORITY 4: Accept Manual (only when AcceptManual is ON) ===
-        if (config.AcceptManual) {
-            if (ScanForButton(ACCEPT_FALLBACK_IMG, left, top, right, bottom, &fX, &fY, 80)) {
-                config.LastAcceptX := fX
-                config.LastAcceptY := fY
-                if (DRY_RUN_MODE) {
-                    LogAction(hwnd, "DRY_RUN_ACCEPT_MANUAL_DETECTED", fX, fY, "Dry Run")
-                } else {
-                    LogAction(hwnd, "ACCEPT_MANUAL_DETECTED", fX, fY, "Live")
-                    now := A_TickCount
-                    if (now - config.LastAcceptClickTime > 10000) {
-                        DoClick(hwnd, fX, fY, "ACCEPT_MANUAL")
-                        config.LastAcceptClickTime := now
-                    } else {
-                        LogAction(hwnd, "ACCEPT_LIVE_COOLDOWN_SKIP", 0, 0, "Cooldown")
-                    }
-                }
-                continue
-            }
-        }
-
-        ; === PRIORITY 5: Copy Debug Info (only when CopyDebugAuto is ON) ===
+        ; === PRIORITY 4: Copy Debug Info ===
         if (config.CopyDebugAuto) {
             if (ScanForButton(COPY_DEBUG_IMG, left, top, right, bottom, &fX, &fY)) {
                 if (DRY_RUN_MODE) {
