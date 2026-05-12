@@ -930,42 +930,38 @@ MainLoop()
             continue
         }
 
-        ; === PRIORITY 3: Accept All Auto ===
-        if (config.AcceptAuto) {
-            if (ScanForButton(ACCEPT_ALL_IMG, left, top, right, bottom, &fX, &fY, 80)) {
+        ; === PRIORITY 3: Accept ===
+        if (config.AcceptManual or config.AcceptAuto) {
+            if (ScanForButton(ACCEPT_ALL_IMG, left, top, right, bottom, &fX, &fY, 80)
+                or ScanForButton(ACCEPT_FALLBACK_IMG, left, top, right, bottom, &fX, &fY, 80)) {
                 config.LastAcceptX := fX
                 config.LastAcceptY := fY
-                if (DRY_RUN_MODE) {
-                    LogAction(hwnd, "DRY_RUN_ACCEPT_ALL_DETECTED", fX, fY, "Dry Run")
-                } else {
-                    LogAction(hwnd, "ACCEPT_ALL_DETECTED", fX, fY, "Live")
-                    now := A_TickCount
-                    if (now - config.LastAcceptClickTime > 10000) {
-                        DoClick(hwnd, fX, fY, "ACCEPT_ALL_AUTO")
-                        config.LastAcceptClickTime := now
+                if (config.AcceptAuto) {
+                    if (DRY_RUN_MODE) {
+                        LogAction(hwnd, "DRY_RUN_ACCEPT_ALL_DETECTED", fX, fY, "Dry Run")
                     } else {
-                        LogAction(hwnd, "ACCEPT_LIVE_COOLDOWN_SKIP", 0, 0, "Cooldown")
+                        LogAction(hwnd, "ACCEPT_ALL_DETECTED", fX, fY, "Live")
+                        now := A_TickCount
+                        if (now - config.LastAcceptClickTime > 10000) {
+                            DoClick(hwnd, fX, fY, "ACCEPT_ALL_AUTO")
+                            config.LastAcceptClickTime := now
+                        } else {
+                            LogAction(hwnd, "ACCEPT_LIVE_COOLDOWN_SKIP", 0, 0, "Cooldown")
+                        }
                     }
-                }
-                continue
-            }
-        }
-
-        ; === PRIORITY 3b: Accept Manual ===
-        if (config.AcceptManual) {
-            if (ScanForButton(ACCEPT_FALLBACK_IMG, left, top, right, bottom, &fX, &fY, 80)) {
-                config.LastAcceptX := fX
-                config.LastAcceptY := fY
-                if (DRY_RUN_MODE) {
-                    LogAction(hwnd, "DRY_RUN_ACCEPT_MANUAL_DETECTED", fX, fY, "Dry Run")
                 } else {
-                    LogAction(hwnd, "ACCEPT_MANUAL_DETECTED", fX, fY, "Live")
-                    now := A_TickCount
-                    if (now - config.LastAcceptClickTime > 10000) {
-                        DoClick(hwnd, fX, fY, "ACCEPT_MANUAL")
-                        config.LastAcceptClickTime := now
+                    ; AcceptManual: detect and log; live click requires user to confirm per-session
+                    if (DRY_RUN_MODE) {
+                        LogAction(hwnd, "DRY_RUN_ACCEPT_MANUAL_DETECTED", fX, fY, "Dry Run")
                     } else {
-                        LogAction(hwnd, "ACCEPT_LIVE_COOLDOWN_SKIP", 0, 0, "Cooldown")
+                        LogAction(hwnd, "ACCEPT_MANUAL_DETECTED", fX, fY, "Live")
+                        now := A_TickCount
+                        if (now - config.LastAcceptClickTime > 10000) {
+                            DoClick(hwnd, fX, fY, "ACCEPT_MANUAL")
+                            config.LastAcceptClickTime := now
+                        } else {
+                            LogAction(hwnd, "ACCEPT_LIVE_COOLDOWN_SKIP", 0, 0, "Cooldown")
+                        }
                     }
                 }
                 continue
