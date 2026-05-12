@@ -166,9 +166,8 @@ chkContinue := MyGui.Add("Checkbox", "x300 y180", "Continue Auto")
 chkContinue.OnEvent("Click", OnCheckboxClick)
 chkAcceptManual := MyGui.Add("Checkbox", "x420 y180", "Accept Manual (Prompt)")
 chkAcceptManual.OnEvent("Click", OnCheckboxClick)
-; Accept All Auto removed — not a user option in this build
-; chkAcceptAuto kept as a variable stub so OnLVClick doesn't crash if referenced
-global chkAcceptAuto := {Value: 0}
+chkAcceptAuto := MyGui.Add("Checkbox", "x20 y205 cRed", "Accept All Auto (CAUTION)")
+chkAcceptAuto.OnEvent("Click", OnAcceptAutoClick)
 
 chkCopyDebugAuto := MyGui.Add("Checkbox", "x200 y205", "Copy Debug Info Auto")
 chkCopyDebugAuto.OnEvent("Click", OnCheckboxClick)
@@ -440,7 +439,7 @@ OnLVClick(targetLV, RowNumber)
     chkRetry.Value := config.RetryAuto
     chkContinue.Value := config.ContinueAuto
     chkAcceptManual.Value := config.AcceptManual
-    ; AcceptAuto removed from UI — not loaded into controls
+    chkAcceptAuto.Value := config.AcceptAuto
     chkCopyDebugAuto.Value := config.CopyDebugAuto
     chkLimitsMonitor.Value := config.LimitsMonitor
     txtCaptureStatus.Value := "Last Detection: " (config.LastRetryTime ? config.LastRetryTime : "None")
@@ -475,7 +474,36 @@ OnCheckboxClick(ctrl, *)
     }
 }
 
-; OnAcceptAutoClick removed — Accept All Auto is not a user option in this build
+OnAcceptAutoClick(ctrl, *)
+{
+    RowNumber := MainLV.GetNext()
+    if (RowNumber = 0)
+    {
+        ctrl.Value := 0
+        return
+    }
+    hwnd := MainLV.GetText(RowNumber, 1)
+    config := WindowConfigs[hwnd]
+    if (ctrl.Value = 1)
+    {
+        if (MsgBox("Accept All Auto can approve multiple changes automatically. Continue?", "DANGER", "YesNo Icon!") = "No")
+        {
+            ctrl.Value := 0
+            config.AcceptAuto := 0
+            LogAction(hwnd, "ACCEPT_ALL_CONFIRMATION_CANCELLED", 0, 0, "")
+        }
+        else
+        {
+            config.AcceptAuto := 1
+            LogAction(hwnd, "ACCEPT_ALL_CONFIRMATION_ACCEPTED", 0, 0, "")
+        }
+    }
+    else
+    {
+        config.AcceptAuto := 0
+        LogAction(hwnd, "ACCEPT_ALL_AUTO_DISABLED", 0, 0, "")
+    }
+}
 
 UpdateStatus(newStatus)
 {
@@ -902,23 +930,38 @@ MainLoop()
             continue
         }
 
-        ; === PRIORITY 3: Accept Manual ===
-        ; AcceptAuto removed — only AcceptManual scans here
-        if (config.AcceptManual) {
-            if (ScanForButton(ACCEPT_FALLBACK_IMG, left, top, right, bottom, &fX, &fY, 80)) {
+        ; === PRIORITY 3: Accept ===
+        if (config.AcceptManual or config.AcceptAuto) {
+            if (ScanForButton(ACCEPT_ALL_IMG, left, top, right, bottom, &fX, &fY, 80)
+                or ScanForButton(ACCEPT_FALLBACK_IMG, left, top, right, bottom, &fX, &fY, 80)) {
                 config.LastAcceptX := fX
                 config.LastAcceptY := fY
-                ; AcceptManual: detect and log; live click requires user to confirm per-session
-                if (DRY_RUN_MODE) {
-                    LogAction(hwnd, "DRY_RUN_ACCEPT_MANUAL_DETECTED", fX, fY, "Dry Run")
-                } else {
-                    LogAction(hwnd, "ACCEPT_MANUAL_DETECTED", fX, fY, "Live")
-                    now := A_TickCount
-                    if (now - config.LastAcceptClickTime > 10000) {
-                        DoClick(hwnd, fX, fY, "ACCEPT_MANUAL")
-                        config.LastAcceptClickTime := now
+                if (config.AcceptAuto) {
+                    if (DRY_RUN_MODE) {
+                        LogAction(hwnd, "DRY_RUN_ACCEPT_ALL_DETECTED", fX, fY, "Dry Run")
                     } else {
-                        LogAction(hwnd, "ACCEPT_LIVE_COOLDOWN_SKIP", 0, 0, "Cooldown")
+                        LogAction(hwnd, "ACCEPT_ALL_DETECTED", fX, fY, "Live")
+                        now := A_TickCount
+                        if (now - config.LastAcceptClickTime > 10000) {
+                            DoClick(hwnd, fX, fY, "ACCEPT_ALL_AUTO")
+                            config.LastAcceptClickTime := now
+                        } else {
+                            LogAction(hwnd, "ACCEPT_LIVE_COOLDOWN_SKIP", 0, 0, "Cooldown")
+                        }
+                    }
+                } else {
+                    ; AcceptManual: detect and log; live click requires user to confirm per-session
+                    if (DRY_RUN_MODE) {
+                        LogAction(hwnd, "DRY_RUN_ACCEPT_MANUAL_DETECTED", fX, fY, "Dry Run")
+                    } else {
+                        LogAction(hwnd, "ACCEPT_MANUAL_DETECTED", fX, fY, "Live")
+                        now := A_TickCount
+                        if (now - config.LastAcceptClickTime > 10000) {
+                            DoClick(hwnd, fX, fY, "ACCEPT_MANUAL")
+                            config.LastAcceptClickTime := now
+                        } else {
+                            LogAction(hwnd, "ACCEPT_LIVE_COOLDOWN_SKIP", 0, 0, "Cooldown")
+                        }
                     }
                 }
                 continue
