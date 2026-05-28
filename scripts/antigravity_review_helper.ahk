@@ -5,7 +5,7 @@
 ; CONFIGURATION & SAFETY SETTINGS
 ; ==============================================================================
 
-global DRY_RUN_MODE := true
+global DRY_RUN_MODE := false
 global IS_PAUSED := false
 global SAFETY_CONFIRMATION_REQUIRED := true
 
@@ -145,16 +145,16 @@ chkEnabled := MyGui.Add("Checkbox", "x20 y180", "Enabled")
 chkEnabled.OnEvent("Click", OnCheckboxClick)
 chkAlwaysOn := MyGui.Add("Checkbox", "x100 y180", "Always On")
 chkAlwaysOn.OnEvent("Click", OnCheckboxClick)
-chkRetry := MyGui.Add("Checkbox", "x200 y180", "Retry Auto")
+chkRetry := MyGui.Add("Checkbox", "x200 y180 Checked", "Retry Auto")
 chkRetry.OnEvent("Click", OnCheckboxClick)
-chkContinue := MyGui.Add("Checkbox", "x300 y180", "Continue Auto")
+chkContinue := MyGui.Add("Checkbox", "x300 y180 Checked", "Continue Auto")
 chkContinue.OnEvent("Click", OnCheckboxClick)
-chkAcceptManual := MyGui.Add("Checkbox", "x420 y180", "Accept Manual (Prompt)")
+chkAcceptManual := MyGui.Add("Checkbox", "x420 y180 Checked", "Accept Manual (Prompt)")
 chkAcceptManual.OnEvent("Click", OnCheckboxClick)
-chkAcceptAuto := MyGui.Add("Checkbox", "x20 y205 cRed", "Accept All Auto (CAUTION)")
+chkAcceptAuto := MyGui.Add("Checkbox", "x20 y205 cRed Checked", "Accept All Auto (CAUTION)")
 chkAcceptAuto.OnEvent("Click", OnAcceptAutoClick)
 
-chkCopyDebugAuto := MyGui.Add("Checkbox", "x200 y205", "Copy Debug Info Auto")
+chkCopyDebugAuto := MyGui.Add("Checkbox", "x200 y205 Checked", "Copy Debug Info Auto")
 chkCopyDebugAuto.OnEvent("Click", OnCheckboxClick)
 chkLimitsMonitor := MyGui.Add("Checkbox", "x420 y205 Checked", "Limits Alert Monitor")
 chkLimitsMonitor.OnEvent("Click", OnCheckboxClick)
@@ -192,13 +192,14 @@ MyGui.Add("Button", "x340 y480 w100", "Stop All").OnEvent("Click", StopAll)
 MyGui.Add("Button", "x450 y480 w100", "Clear Log").OnEvent("Click", OnClearLog)
 MyGui.Add("Button", "x560 y480 w50", "Exit").OnEvent("Click", (*) => ExitApp())
 
-chkDryRunGlobal := MyGui.Add("Checkbox", "x10 y505 Checked", "Global Dry Run Mode (Safety)")
+chkDryRunGlobal := MyGui.Add("Checkbox", "x10 y505", "Global Dry Run Mode (Safety)")
 chkDryRunGlobal.OnEvent("Click", OnDryRunToggle)
 
 global txtGlobalStatus := MyGui.Add("Text", "x10 y525 w600 cBlue", "Helper: RUNNING | Dry Run: ON")
 MyGui.Add("Text", "x450 y525 w160 cGray Right", "Emergency: Ctrl+Alt+Esc")
 
 MyGui.Show("w1000 h550")
+UpdateGlobalStatus()
 RefreshWindowList()
 ; SetTimer(RefreshWindowList, 5000) ; DISABLED to prevent selection loss and stale HWND access
 
@@ -565,7 +566,7 @@ RefreshWindowList(*)
         
         if (isMatch)
         {
-            config := {Enabled: 0, AlwaysOn: 0, RetryAuto: 0, ContinueAuto: 0, AcceptManual: 1, AcceptAuto: 0, CopyDebugAuto: 0, LimitsMonitor: 1, Status: "Stopped", LastAcceptX: 0, LastAcceptY: 0, LastRetryTime: "", LastCaptureStatus: "Idle", CapturedText: "", AlertActive: false, LastLimitLog: 0, LastScanLogTime: 0, LastAcceptClickTime: 0, LastRetryClickTime: 0}
+            config := {Enabled: 0, AlwaysOn: 0, RetryAuto: 1, ContinueAuto: 1, AcceptManual: 1, AcceptAuto: 1, CopyDebugAuto: 1, LimitsMonitor: 1, Status: "Stopped", LastAcceptX: 0, LastAcceptY: 0, LastRetryTime: "", LastCaptureStatus: "Idle", CapturedText: "", AlertActive: false, LastLimitLog: 0, LastScanLogTime: 0, LastAcceptClickTime: 0, LastRetryClickTime: 0}
             if (oldConfigs.Has("" hwnd))
                 config := oldConfigs["" hwnd]
             
