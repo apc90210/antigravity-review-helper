@@ -151,7 +151,7 @@ chkContinue := MyGui.Add("Checkbox", "x300 y180 Checked", "Continue Auto")
 chkContinue.OnEvent("Click", OnCheckboxClick)
 chkAcceptManual := MyGui.Add("Checkbox", "x420 y180 Checked", "Accept Manual (Prompt)")
 chkAcceptManual.OnEvent("Click", OnCheckboxClick)
-chkAcceptAuto := MyGui.Add("Checkbox", "x20 y205 cRed Checked", "Accept All Auto (CAUTION)")
+chkAcceptAuto := MyGui.Add("Checkbox", "x20 y205 cRed", "Accept All Auto (CAUTION)")
 chkAcceptAuto.OnEvent("Click", OnAcceptAutoClick)
 
 chkCopyDebugAuto := MyGui.Add("Checkbox", "x200 y205 Checked", "Copy Debug Info Auto")
@@ -566,7 +566,7 @@ RefreshWindowList(*)
         
         if (isMatch)
         {
-            config := {Enabled: 0, AlwaysOn: 0, RetryAuto: 1, ContinueAuto: 1, AcceptManual: 1, AcceptAuto: 1, CopyDebugAuto: 1, LimitsMonitor: 1, Status: "Stopped", LastAcceptX: 0, LastAcceptY: 0, LastRetryTime: "", LastCaptureStatus: "Idle", CapturedText: "", AlertActive: false, LastLimitLog: 0, LastScanLogTime: 0, LastAcceptClickTime: 0, LastRetryClickTime: 0}
+            config := {Enabled: 0, AlwaysOn: 0, RetryAuto: 1, ContinueAuto: 1, AcceptManual: 1, AcceptAuto: 0, CopyDebugAuto: 1, LimitsMonitor: 1, Status: "Stopped", LastAcceptX: 0, LastAcceptY: 0, LastRetryTime: "", LastCaptureStatus: "Idle", CapturedText: "", AlertActive: false, LastLimitLog: 0, LastScanLogTime: 0, LastAcceptClickTime: 0, LastRetryClickTime: 0}
             if (oldConfigs.Has("" hwnd))
                 config := oldConfigs["" hwnd]
             
