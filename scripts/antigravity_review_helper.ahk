@@ -989,14 +989,31 @@ ScanForAcceptButton(left, top, right, bottom, &foundX, &foundY) {
 }
 
 ScanForButton(imgPath, x1, y1, x2, y2, &fX, &fY, tolerance := 50) {
-    if (!FileExist(imgPath))
-        return false
     CoordMode "Pixel", "Screen"
-    if ImageSearch(&fX, &fY, x1, y1, x2, y2, "*" tolerance " " imgPath)
-    {
-        fX += 10
-        fY += 10
-        return true
+    fX := 0
+    fY := 0
+
+    if (!FileExist(imgPath)) {
+        return false
+    }
+
+    if (x1 = "" or y1 = "" or x2 = "" or y2 = "") {
+        return false
+    }
+
+    if (x2 <= x1 or y2 <= y1) {
+        return false
+    }
+
+    try {
+        if ImageSearch(&fX, &fY, x1, y1, x2, y2, "*" tolerance " " imgPath) {
+            fX += 10
+            fY += 10
+            return true
+        }
+    } catch as err {
+        ; Do not crash timer/MainLoop on transient ImageSearch failures.
+        return false
     }
     return false
 }
