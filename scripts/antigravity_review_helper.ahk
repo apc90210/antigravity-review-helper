@@ -66,6 +66,7 @@ global CONTINUE_IMG := ASSET_DIR "continue_button.png"
 global COPY_DEBUG_IMG := ASSET_DIR "copy_debug_info_button.png"
 global ACCEPT_ALL_IMG := ASSET_DIR "accept_all_button.png"
 global ACCEPT_FALLBACK_IMG := ASSET_DIR "accept_button.png"
+global ACCEPT_HOVER_IMG := ASSET_DIR "accept_button_hover.png"
 global ENABLE_OVERAGES_IMG := ASSET_DIR "enable_overages_button.png"
 global LIMITS_FALLBACK_IMG := ALERT_DIR "limit_warning.png"
 
@@ -901,11 +902,32 @@ MainLoop()
 
         ; === PRIORITY 3: Accept ===
         if (config.AcceptManual or config.AcceptAuto) {
-            if (ScanForButton(ACCEPT_ALL_IMG, left, top, right, bottom, &fX, &fY, 80)
-                or ScanForButton(ACCEPT_FALLBACK_IMG, left, top, right, bottom, &fX, &fY, 80)) {
+            foundAccept := false
+            acceptType := "" ; "all", "manual_normal", "manual_hover"
+
+            if (config.AcceptAuto) {
+                if (ScanForButton(ACCEPT_ALL_IMG, left, top, right, bottom, &fX, &fY, 80)
+                    or ScanForButton(ACCEPT_FALLBACK_IMG, left, top, right, bottom, &fX, &fY, 80)) {
+                    foundAccept := true
+                    acceptType := "all"
+                }
+            } else if (config.AcceptManual) {
+                if (ScanForButton(ACCEPT_ALL_IMG, left, top, right, bottom, &fX, &fY, 80)) {
+                    foundAccept := true
+                    acceptType := "manual_normal"
+                } else {
+                    acceptVariant := ScanForAcceptButton(left, top, right, bottom, &fX, &fY)
+                    if (acceptVariant != "") {
+                        foundAccept := true
+                        acceptType := "manual_" acceptVariant
+                    }
+                }
+            }
+
+            if (foundAccept) {
                 config.LastAcceptX := fX
                 config.LastAcceptY := fY
-                if (config.AcceptAuto) {
+                if (acceptType = "all") {
                     if (DRY_RUN_MODE) {
                         LogAction(hwnd, "DRY_RUN_ACCEPT_ALL_DETECTED", fX, fY, "Dry Run")
                     } else {
@@ -920,10 +942,11 @@ MainLoop()
                     }
                 } else {
                     ; AcceptManual: detect and log; live click requires user to confirm per-session
+                    variantNote := (acceptType = "manual_hover") ? "variant=hover" : "variant=normal"
                     if (DRY_RUN_MODE) {
-                        LogAction(hwnd, "DRY_RUN_ACCEPT_MANUAL_DETECTED", fX, fY, "Dry Run")
+                        LogAction(hwnd, "DRY_RUN_ACCEPT_MANUAL_DETECTED", fX, fY, variantNote)
                     } else {
-                        LogAction(hwnd, "ACCEPT_MANUAL_DETECTED", fX, fY, "Live")
+                        LogAction(hwnd, "ACCEPT_MANUAL_DETECTED", fX, fY, variantNote)
                         now := A_TickCount
                         if (now - config.LastAcceptClickTime > 10000) {
                             DoClick(hwnd, fX, fY, "ACCEPT_MANUAL")
@@ -949,6 +972,20 @@ MainLoop()
             }
         }
     }
+}
+
+ScanForAcceptButton(left, top, right, bottom, &foundX, &foundY) {
+    if (ScanForButton(ACCEPT_FALLBACK_IMG, left, top, right, bottom, &foundX, &foundY, 80)) {
+        return "normal"
+    }
+
+    if (FileExist(ACCEPT_HOVER_IMG)) {
+        if (ScanForButton(ACCEPT_HOVER_IMG, left, top, right, bottom, &foundX, &foundY, 80)) {
+            return "hover"
+        }
+    }
+
+    return ""
 }
 
 ScanForButton(imgPath, x1, y1, x2, y2, &fX, &fY, tolerance := 50) {
