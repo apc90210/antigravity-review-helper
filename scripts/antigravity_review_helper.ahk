@@ -652,7 +652,7 @@ CaptureDebugViaCopyButton(hwnd, foundX, foundY, triggerType)
     A_Clipboard := ""
     CoordMode "Mouse", "Screen"
     if (SafeWinExists(hwnd))
-        Click(foundX, foundY)
+        RestoreMouseClick(hwnd, foundX, foundY)
     if (ClipWait(3))
         UpdateDebugViewer(hwnd, A_Clipboard, "COPY_BUTTON")
     else
@@ -1001,6 +1001,14 @@ ScanForButton(imgPath, x1, y1, x2, y2, &fX, &fY, tolerance := 50) {
     return false
 }
 
+RestoreMouseClick(hwnd, clickX, clickY, &origX := 0, &origY := 0) {
+    CoordMode "Mouse", "Screen"
+    MouseGetPos(&origX, &origY)
+    MouseClick("Left", clickX, clickY, 1, 0)
+    Sleep(80)
+    MouseMove(origX, origY, 0)
+}
+
 DoClick(hwnd, clickX, clickY, type) {
     if (!GetWindowSearchRect(hwnd, &left, &top, &right, &bottom, &width, &height)) {
         LogAction(hwnd, "CLICK_SKIPPED_STALE_WINDOW", clickX, clickY, type)
@@ -1020,8 +1028,9 @@ DoClick(hwnd, clickX, clickY, type) {
     }
     CoordMode "Mouse", "Screen"
     if (SafeWinExists(hwnd)) {
-        Click(clickX, clickY)
-        LogAction(hwnd, "CLICKED_" StrUpper(type), clickX, clickY, "Live")
+        origX := 0, origY := 0
+        RestoreMouseClick(hwnd, clickX, clickY, &origX, &origY)
+        LogAction(hwnd, "CLICKED_" StrUpper(type), clickX, clickY, "Live | mouse_restore=YES original=" origX "," origY " target=" clickX "," clickY)
     } else {
         LogAction(hwnd, "CLICK_SKIPPED_STALE_WINDOW", clickX, clickY, type)
     }
