@@ -146,6 +146,8 @@ chkEnabled := MyGui.Add("Checkbox", "x20 y180", "Enabled")
 chkEnabled.OnEvent("Click", OnCheckboxClick)
 chkAlwaysOn := MyGui.Add("Checkbox", "x100 y180 Hidden", "Always On")
 chkAlwaysOn.OnEvent("Click", OnCheckboxClick)
+chkRestoreClick := MyGui.Add("Checkbox", "x100 y180", "Click")
+chkRestoreClick.OnEvent("Click", OnCheckboxClick)
 chkRetry := MyGui.Add("Checkbox", "x200 y180 Checked", "Retry Auto")
 chkRetry.OnEvent("Click", OnCheckboxClick)
 chkContinue := MyGui.Add("Checkbox", "x300 y180 Checked", "Continue Auto")
@@ -408,6 +410,9 @@ OnLVClick(targetLV, RowNumber)
     config := WindowConfigs[hwnd]
     chkEnabled.Value := config.Enabled
     chkAlwaysOn.Value := config.AlwaysOn
+    if (!config.HasProp("RestoreClick"))
+        config.RestoreClick := 0
+    chkRestoreClick.Value := config.RestoreClick
     chkRetry.Value := config.RetryAuto
     chkContinue.Value := config.ContinueAuto
     chkAcceptManual.Value := config.AcceptManual
@@ -433,6 +438,8 @@ OnCheckboxClick(ctrl, *)
         config.Enabled := ctrl.Value
     } else if (ctrl = chkAlwaysOn) {
         config.AlwaysOn := ctrl.Value
+    } else if (ctrl = chkRestoreClick) {
+        config.RestoreClick := ctrl.Value
     } else if (ctrl = chkRetry) {
         config.RetryAuto := ctrl.Value
     } else if (ctrl = chkContinue) {
@@ -602,7 +609,7 @@ RefreshWindowList(*)
         
         if (isMatch)
         {
-            config := {Enabled: 0, AlwaysOn: 0, RetryAuto: 1, ContinueAuto: 1, AcceptManual: 1, AcceptAuto: 0, CopyDebugAuto: 1, LimitsMonitor: 1, Status: "Stopped", LastAcceptX: 0, LastAcceptY: 0, LastRetryTime: "", LastCaptureStatus: "Idle", CapturedText: "", AlertActive: false, LastLimitLog: 0, LastScanLogTime: 0, LastAcceptClickTime: 0, LastRetryClickTime: 0}
+            config := {Enabled: 0, AlwaysOn: 0, RestoreClick: 0, RetryAuto: 1, ContinueAuto: 1, AcceptManual: 1, AcceptAuto: 0, CopyDebugAuto: 1, LimitsMonitor: 1, Status: "Stopped", LastAcceptX: 0, LastAcceptY: 0, LastRetryTime: "", LastCaptureStatus: "Idle", CapturedText: "", AlertActive: false, LastLimitLog: 0, LastScanLogTime: 0, LastAcceptClickTime: 0, LastRetryClickTime: 0}
             if (oldConfigs.Has("" hwnd))
                 config := oldConfigs["" hwnd]
             
@@ -687,7 +694,13 @@ CaptureDebugViaCopyButton(hwnd, foundX, foundY, triggerType)
     A_Clipboard := ""
     CoordMode "Mouse", "Screen"
     if (SafeWinExists(hwnd))
-        RestoreMouseClick(hwnd, foundX, foundY)
+    {
+        restoreClick := false
+        if (WindowConfigs.Has("" hwnd))
+            restoreClick := WindowConfigs["" hwnd].RestoreClick
+        dummyX := 0, dummyY := 0
+        RestoreMouseClick(hwnd, foundX, foundY, &dummyX, &dummyY, restoreClick)
+    }
     if (ClipWait(3))
         UpdateDebugViewer(hwnd, A_Clipboard, "COPY_BUTTON")
     else
@@ -1053,12 +1066,16 @@ ScanForButton(imgPath, x1, y1, x2, y2, &fX, &fY, tolerance := 50) {
     return false
 }
 
-RestoreMouseClick(hwnd, clickX, clickY, &origX := 0, &origY := 0) {
+RestoreMouseClick(hwnd, clickX, clickY, &origX := 0, &origY := 0, restoreClick := false) {
     CoordMode "Mouse", "Screen"
     MouseGetPos(&origX, &origY)
     MouseClick("Left", clickX, clickY, 1, 0)
     Sleep(80)
     MouseMove(origX, origY, 0)
+    if (restoreClick) {
+        MouseClick("Left", origX, origY, 1, 0)
+        LogAction(hwnd, "RESTORE_POSITION_CLICK", origX, origY, "")
+    }
 }
 
 DoClick(hwnd, clickX, clickY, type) {
@@ -1080,8 +1097,11 @@ DoClick(hwnd, clickX, clickY, type) {
     }
     CoordMode "Mouse", "Screen"
     if (SafeWinExists(hwnd)) {
+        restoreClick := false
+        if (WindowConfigs.Has("" hwnd))
+            restoreClick := WindowConfigs["" hwnd].RestoreClick
         origX := 0, origY := 0
-        RestoreMouseClick(hwnd, clickX, clickY, &origX, &origY)
+        RestoreMouseClick(hwnd, clickX, clickY, &origX, &origY, restoreClick)
         LogAction(hwnd, "CLICKED_" StrUpper(type), clickX, clickY, "Live | mouse_restore=YES original=" origX "," origY " target=" clickX "," clickY)
     } else {
         LogAction(hwnd, "CLICK_SKIPPED_STALE_WINDOW", clickX, clickY, type)
