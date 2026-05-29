@@ -144,7 +144,7 @@ btnResetCounters.OnEvent("Click", (*) => ResetCounters())
 MyGui.Add("GroupBox", "x10 y160 w550 h100", "Selected Window Configuration")
 chkEnabled := MyGui.Add("Checkbox", "x20 y180", "Enabled")
 chkEnabled.OnEvent("Click", OnCheckboxClick)
-chkAlwaysOn := MyGui.Add("Checkbox", "x100 y180", "Always On")
+chkAlwaysOn := MyGui.Add("Checkbox", "x100 y180 Hidden", "Always On")
 chkAlwaysOn.OnEvent("Click", OnCheckboxClick)
 chkRetry := MyGui.Add("Checkbox", "x200 y180 Checked", "Retry Auto")
 chkRetry.OnEvent("Click", OnCheckboxClick)
@@ -152,8 +152,10 @@ chkContinue := MyGui.Add("Checkbox", "x300 y180 Checked", "Continue Auto")
 chkContinue.OnEvent("Click", OnCheckboxClick)
 chkAcceptManual := MyGui.Add("Checkbox", "x420 y180 Checked", "Accept Manual (Prompt)")
 chkAcceptManual.OnEvent("Click", OnCheckboxClick)
-chkAcceptAuto := MyGui.Add("Checkbox", "x20 y205 cRed", "Accept All Auto (CAUTION)")
+chkAcceptAuto := MyGui.Add("Checkbox", "x20 y205 Hidden", "Accept All Auto (CAUTION)")
 chkAcceptAuto.OnEvent("Click", OnAcceptAutoClick)
+btnToggleActions := MyGui.Add("Button", "x20 y205 w120", "Toggle Actions")
+btnToggleActions.OnEvent("Click", OnToggleActionsClick)
 
 chkCopyDebugAuto := MyGui.Add("Checkbox", "x200 y205 Checked", "Copy Debug Info Auto")
 chkCopyDebugAuto.OnEvent("Click", OnCheckboxClick)
@@ -191,12 +193,12 @@ MyGui.Add("Button", "x120 y480 w100", "Start Selected").OnEvent("Click", (*) => 
 MyGui.Add("Button", "x230 y480 w100", "Stop Selected").OnEvent("Click", (*) => UpdateStatus("Stopped"))
 MyGui.Add("Button", "x340 y480 w100", "Stop All").OnEvent("Click", StopAll)
 MyGui.Add("Button", "x450 y480 w100", "Clear Log").OnEvent("Click", OnClearLog)
-MyGui.Add("Button", "x560 y480 w50", "Exit").OnEvent("Click", (*) => ExitApp())
+MyGui.Add("Button", "x340 y510 w100", "Exit").OnEvent("Click", (*) => ExitApp())
 
 chkDryRunGlobal := MyGui.Add("Checkbox", "x10 y505", "Global Dry Run Mode (Safety)")
 chkDryRunGlobal.OnEvent("Click", OnDryRunToggle)
 
-global txtGlobalStatus := MyGui.Add("Text", "x10 y525 w600 cBlue", "Helper: RUNNING | Dry Run: ON")
+global txtGlobalStatus := MyGui.Add("Text", "x10 y525 w320 cBlue", "Helper: RUNNING | Dry Run: ON")
 MyGui.Add("Text", "x450 y525 w160 cGray Right", "Emergency: Ctrl+Alt+Esc")
 
 MyGui.Show("w1000 h550")
@@ -473,6 +475,39 @@ OnAcceptAutoClick(ctrl, *)
         config.AcceptAuto := 0
         LogAction(hwnd, "ACCEPT_ALL_AUTO_DISABLED", 0, 0, "")
     }
+}
+
+OnToggleActionsClick(*)
+{
+    Row := MainLV.GetNext()
+    if (!Row)
+    {
+        MsgBox("No window selected.", "Selection Required", "Icon!")
+        return
+    }
+    hwnd := MainLV.GetText(Row, 1)
+    if (!WindowConfigs.Has(hwnd))
+        return
+    config := WindowConfigs[hwnd]
+    
+    ; Determine if any of the action configurations is OFF (i.e. = 0)
+    anyOff := (!config.RetryAuto or !config.AcceptManual or !config.ContinueAuto or !config.CopyDebugAuto or !config.LimitsMonitor)
+    
+    ; If any are OFF, turn all ON (1). Otherwise, turn all OFF (0).
+    newVal := anyOff ? 1 : 0
+    
+    config.RetryAuto := newVal
+    config.AcceptManual := newVal
+    config.ContinueAuto := newVal
+    config.CopyDebugAuto := newVal
+    config.LimitsMonitor := newVal
+    
+    ; Update UI checkboxes
+    chkRetry.Value := newVal
+    chkAcceptManual.Value := newVal
+    chkContinue.Value := newVal
+    chkCopyDebugAuto.Value := newVal
+    chkLimitsMonitor.Value := newVal
 }
 
 UpdateStatus(newStatus)
